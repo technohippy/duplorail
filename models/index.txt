@@ -1,0 +1,67 @@
+corner.stl
+  角
+  入口出口が90度。上に経路はない
+  1x1x1
+cornerHole.stl
+  角穴
+  入口出口が90度。上に経路がある
+  1x2x1
+cosinusSlope.stl
+  余弦坂
+  未使用。入口出口が直線。長さ2で高さが1違う。上に経路はない
+  2x2x1
+crossing.stl
+  直交
+  未使用
+  1x1x1
+end.stl
+  開始・終了
+  入口または出口のみ
+  1x1x1
+longRamp.stl
+  直線坂
+  未使用。入口出口が直線。長さ2で高さが1違う。上に経路はない
+  2x2x1
+ramp.stl
+  直線坂
+  入口出口が直線。長さ1で高さが1違う。上に経路はない
+  1x2x1
+ramp2.stl
+  直線坂
+  未使用。入口出口が直線。長さ1で高さが0.5違う。上に経路はない
+  1x1.5x1
+rampCorner1.stl
+  坂角1
+  入口出口が90度。入口出口で高さが1違う。上に経路はない
+  1x2x1
+rampCorner2.stl
+  坂角2
+  入口出口が-90度。入口出口で高さが1違う。上に経路はない
+  1x2x1
+straight.stl
+  直線
+  上に経路はない
+  1x1x1
+straightHole.stl
+  直線
+  上に経路がある
+  1x2x1
+verticalCurveHole.stl
+  垂直出口穴
+  1x2x1
+verticalCurveHoleStart.stl
+  垂直入口穴
+  1x2x1
+verticalHolde.stl
+  垂直穴
+  1x2x1
+
+duplo-2x1x4.stl
+duplo-2x2x2.stl
+duplo-2x2x4.stl
+duplo-2x4x1.stl
+duplo-2x4x2.stl
+duplo-8x8-place.stl
+duplo-8x8-plate.stl
+duplo-block-lib.scad
+duplo-marblerun.scad
