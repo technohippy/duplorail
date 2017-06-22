@@ -90,6 +90,7 @@ class Cursor {
     block.position.copy(this.position);
     this.grid.set(block, this.position);
     this.track.add(block);
+    /*
     let lastBlock = this.track.peek(1);
     if (lastBlock) {
       let mesh = lastBlock.getMesh(this.grid);
@@ -97,6 +98,18 @@ class Cursor {
         this.grid.getMesh().add(mesh);
       }
     }
+    */
+
+    for (let i = 1; i < this.track.length; i++) {
+      let lastBlock = this.track.peek(i);
+      if (lastBlock && !lastBlock.mesh) {
+        let mesh = lastBlock.getMesh(this.grid);
+        if (mesh) {
+          this.grid.getMesh().add(mesh);
+        }
+      }
+    }
+
     return block;
   }
 
@@ -115,6 +128,7 @@ class Cursor {
     if (isCrossRoad) return false;
 
     let upOrDown = nextPosition.clone().sub(this.position).y;
+    if (upOrDown !== 0 && this.track.length === 1) return false;
     if (upOrDown !== 1) {
       let belowNextBlock = this.grid.get(nextPosition.clone().add(new THREE.Vector3(0, -1, 0)))
       let hasBelowRoad = belowNextBlock instanceof Block;
@@ -280,12 +294,14 @@ class Block {
     this.settings = settings;
     this.position = new THREE.Vector3(-1, -1, -1);
     this.mesh = null;
-    this.from = null;
-    this.to = null;
+    this.fromSide = null;
+    this.toSide = null;
+    this.prevBlock = null;
+    this.nextBlock = null;
   }
 
   isOpenSides(s1, s2) {
-    return (this.from.equals(s1) && this.to.equals(s2)) || (this.from.equals(s2) && this.to.equals(s1));
+    return (this.fromSide.equals(s1) && this.toSide.equals(s2)) || (this.fromSide.equals(s2) && this.toSide.equals(s1));
   }
 
   getMesh(grid) {
@@ -294,9 +310,9 @@ class Block {
     if (!this.mesh) {
       let rotateZ = 0;
       let geometry;
-      if (this.from === null || this.to === null) {
+      if (this.fromSide === null || this.toSide === null) {
         geometry = models['end.stl'];
-        let openSide = this.from || this.to;
+        let openSide = this.fromSide || this.toSide;
         if      (openSide.equals(FRONT)) rotateZ =  Math.PI;
         else if (openSide.equals(LEFT))  rotateZ =  Math.PI / 2;
         else if (openSide.equals(RIGHT)) rotateZ = -Math.PI / 2;
@@ -320,7 +336,7 @@ class Block {
           geometry = models['straight.stl'];
         }
       }
-      else if (this.from.clone().sub(this.to).y === 0) {
+      else if (this.fromSide.clone().sub(this.toSide).y === 0) {
         if (hasCeil) {
           geometry = models['cornerHole.stl'];
           offsetY = this.settings.block.y / 2;
@@ -332,19 +348,56 @@ class Block {
         else if (this.isOpenSides(BACK, RIGHT))  rotateZ =  Math.PI;
         else if (this.isOpenSides(FRONT, RIGHT)) rotateZ =  Math.PI / 2;
       }
-      else if (this.isOpenSides(TOP, BOTTOM)) {
+      else if (!this.fromSide.equals(TOP) && this.toSide.equals(BOTTOM)) {
+        if (this.nextBlock && this.nextBlock.toSide) {
+          if (this.nextBlock.toSide.equals(BOTTOM)) {
+            geometry = models['verticalCurveHoleStart.stl'];
+            offsetY = this.settings.block.y / 2;
+            if      (this.fromSide.equals(BACK))  rotateZ =  Math.PI;
+            else if (this.fromSide.equals(LEFT))  rotateZ = -Math.PI / 2;
+            else if (this.fromSide.equals(RIGHT)) rotateZ =  Math.PI / 2;
+          }
+          else {
+            if ((this.fromSide.equals(BACK) && this.nextBlock.toSide.equals(FRONT)) ||
+                (this.fromSide.equals(FRONT) && this.nextBlock.toSide.equals(BACK)) ||
+                (this.fromSide.equals(LEFT) && this.nextBlock.toSide.equals(RIGHT)) ||
+                (this.fromSide.equals(RIGHT) && this.nextBlock.toSide.equals(LEFT))) {
+              geometry = models['ramp.stl'];
+              if      (this.fromSide.equals(FRONT)) rotateZ =  Math.PI;
+              else if (this.fromSide.equals(LEFT))  rotateZ =  Math.PI / 2;
+              else if (this.fromSide.equals(RIGHT)) rotateZ = -Math.PI / 2;
+            }
+            else if ((this.fromSide.equals(BACK) && this.nextBlock.toSide.equals(LEFT)) ||
+                (this.fromSide.equals(FRONT) && this.nextBlock.toSide.equals(RIGHT)) ||
+                (this.fromSide.equals(LEFT) && this.nextBlock.toSide.equals(FRONT)) ||
+                (this.fromSide.equals(RIGHT) && this.nextBlock.toSide.equals(BACK))) {
+
+              geometry = models['rampCorner1.stl'];
+              if      (this.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
+              else if (this.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
+              else if (this.fromSide.equals(RIGHT)) rotateZ =  Math.PI;
+            }
+            else if ((this.fromSide.equals(BACK) && this.nextBlock.toSide.equals(RIGHT)) ||
+                (this.fromSide.equals(FRONT) && this.nextBlock.toSide.equals(LEFT)) ||
+                (this.fromSide.equals(LEFT) && this.nextBlock.toSide.equals(BACK)) ||
+                (this.fromSide.equals(RIGHT) && this.nextBlock.toSide.equals(FRONT))) {
+
+              geometry = models['rampCorner2.stl'];
+              if      (this.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
+              else if (this.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
+              else if (this.fromSide.equals(RIGHT)) rotateZ =  Math.PI;
+            }
+            offsetY = -this.settings.block.y / 2;
+          }
+        }
       }
-      else {
-        return null;
-        //geometry = new THREE.BoxGeometry(this.settings.block.x, this.settings.block.z, this.settings.block.y);
-      }
-      //let geometry = models['corner.stl']
+      if (!geometry) return null;
+
       let color = new THREE.Color(
         this.position.x / this.settings.world.x,
         this.position.y / this.settings.world.y,
         this.position.z / this.settings.world.z
       );
-      //let material = new THREE.MeshPhongMaterial({color: 0x0000ff});
       let material = new THREE.MeshPhongMaterial({color: color});
       this.mesh = new THREE.Mesh(geometry, material);
       this.mesh.rotation.x = -Math.PI / 2;
@@ -382,9 +435,12 @@ class Track {
   add(block) {
     let lastBlock = this.track[this.track.length - 1];
     if (lastBlock) {
+      lastBlock.nextBlock = block;
+      block.prevBlock = lastBlock;
+
       let direction = block.position.clone().sub(lastBlock.position);
-      lastBlock.to = direction;
-      block.from = direction.clone().negate();
+      lastBlock.toSide = direction;
+      block.fromSide = direction.clone().negate();
     }
     this.track.push(block);
   }
@@ -394,11 +450,14 @@ class Track {
   }
 
   peek(index=0) {
+    if (this.track.length - 1 < index) {
+      return null;
+    }
     return this.track[this.track.length - 1 - index];
   }
 
-  createDuplo() {
-    // TODO
+  get length() {
+    return this.track.length;
   }
 }
 
