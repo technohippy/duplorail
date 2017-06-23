@@ -55,6 +55,9 @@ verticalCurveHoleStart.stl
 verticalHolde.stl
   垂直穴
   1x2x1
+verticalHole1.stl
+  垂直穴
+  1x1x1
 
 duplo-2x1x4.stl
 duplo-2x2x2.stl

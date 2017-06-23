@@ -20,27 +20,27 @@ pr = 2*dr + 2; // plate raster
 //smallPlate(); // simple pieces, each only once
 //bigPlate();     // more straight and corner pieces
 
-//straightPiece();
-//cornerPiece();
-//rampPiece();
-//ramp2Piece();
-//longRampPiece();
-//cosinusSlopedRampPiece();
-//crossingPiece();
-//straightHolePiece(); 
-//cornerHolePiece(); 
-//rampCornerPiece(steps=quality);
-//mirror([0,1,0]) rampCornerPiece(steps=quality);
-//endPiece();
-//cornerVerticalHolePiece();
-//verticalHolePiece();
-//verticalCurveHoleStartPiece();
-verticalCurveHoleEndPiece();
+//translate([0,0,9.6*1]) straightPiece();
+//translate([0,0,9.6*1]) cornerPiece();
+//translate([0,0,9.6*2]) rampPiece();
+//translate([0,0,9.6*2]) ramp2Piece();
+//translate([0,0,9.6*2]) longRampPiece();
+//translate([0,0,9.6*2]) cosinusSlopedRampPiece();
+//translate([0,0,9.6*1]) crossingPiece();
+//translate([0,0,9.6*2]) straightHolePiece(); 
+//translate([0,0,9.6*2]) cornerHolePiece(); 
+//translate([0,0,9.6*2]) rampCornerPiece(steps=quality);
+//mirror([0,1,0]) translate([0,0,9.6*2])  rampCornerPiece(steps=quality);
+//translate([0,0,9.6*1]) endPiece();
+//translate([0,0,9.6*1]) cornerVerticalHolePiece();//??
+//translate([0,0,9.6*1]) verticalHolePiece();
+//translate([0,0,9.6*2]) verticalCurveHoleStartPiece();
+translate([0,0,9.6*2]) verticalCurveHoleEndPiece();
 //translate([0, -35, -9.5])straightPiece();
 module verticalHolePiece() 
 {
    difference() {
-      duploMarbleRunBase(2,2,4,true);
+      duploMarbleRunBase(2,2,2,true);
       cylinder(r=innerRadius, h=duploHeight * 5, center=true, $fn = quality * 2);
    }
 
@@ -122,7 +122,7 @@ module straightPiece()
 module straightHolePiece()
 {
    difference() {
-     duploMarbleRunBase(2,2,true);
+     duploMarbleRunBase(2,2,4,true);
       translate([0,dr+1, 0*duploHeight+2]) rotate([90,0,0])
          cylinder( duploRaster*4, innerRadius, innerRadius,$fn = quality*2 );
    }

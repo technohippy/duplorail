@@ -1,19 +1,22 @@
 let models = {
   "corner.stl":null,
   "cornerHole.stl":null,
-  "cosinusSlope.stl":null,
-  "crossing.stl":null,
   "end.stl":null,
-  "longRamp.stl":null,
   "ramp.stl":null,
   "ramp2.stl":null,
   "rampCorner1.stl":null,
   "rampCorner2.stl":null,
   "straight.stl":null,
   "straightHole.stl":null,
-  "verticalCurveHole.stl":null,
   "verticalCurveHoleStart.stl":null,
-  "verticalHolde.stl":null,
+  "verticalCurveHoleEnd.stl":null,
+  "verticalHole.stl":null,
+  "verticalHole1.stl":null
+  /*
+  "longRamp.stl":null,
+  "crossing.stl":null,
+  "cosinusSlope.stl":null,
+  "verticalCurveHole.stl":null,
   "duplo-2x1x4.stl":null,
   "duplo-2x2x2.stl":null,
   "duplo-2x2x4.stl":null,
@@ -21,6 +24,7 @@ let models = {
   "duplo-2x4x2.stl":null,
   "duplo-8x8-place.stl":null,
   "duplo-8x8-plate.stl":null
+  */
 };
 let modelNames = Object.keys(models);
 let loader = new THREE.STLLoader();
@@ -293,6 +297,7 @@ class Block {
   constructor(settings) {
     this.settings = settings;
     this.position = new THREE.Vector3(-1, -1, -1);
+    this.type = null;
     this.mesh = null;
     this.fromSide = null;
     this.toSide = null;
@@ -304,14 +309,22 @@ class Block {
     return (this.fromSide.equals(s1) && this.toSide.equals(s2)) || (this.fromSide.equals(s2) && this.toSide.equals(s1));
   }
 
+  _setType(type) {
+    console.log(`type: ${type}`);
+    this.type = type;
+  }
+
+  getGeometry() {
+    return models[this.type];
+  }
+
   getMesh(grid) {
     let hasCeil = this.hasCeil(grid);
     let offsetY = 0;
     if (!this.mesh) {
       let rotateZ = 0;
-      let geometry;
       if (this.fromSide === null || this.toSide === null) {
-        geometry = models['end.stl'];
+        this._setType('end.stl');
         let openSide = this.fromSide || this.toSide;
         if      (openSide.equals(FRONT)) rotateZ =  Math.PI;
         else if (openSide.equals(LEFT))  rotateZ =  Math.PI / 2;
@@ -319,30 +332,30 @@ class Block {
       }
       else if (this.isOpenSides(LEFT, RIGHT)) {
         if (hasCeil) {
-          geometry = models['straightHole.stl'];
+          this._setType('straightHole.stl');
           offsetY = this.settings.block.y / 2;
         }
         else {
-          geometry = models['straight.stl'];
+          this._setType('straight.stl');
         }
         rotateZ = Math.PI / 2;
       }
       else if (this.isOpenSides(FRONT, BACK)) {
         if (hasCeil) {
-          geometry = models['straightHole.stl'];
+          this._setType('straightHole.stl');
           offsetY = this.settings.block.y / 2;
         }
         else {
-          geometry = models['straight.stl'];
+          this._setType('straight.stl');
         }
       }
       else if (this.fromSide.clone().sub(this.toSide).y === 0) {
         if (hasCeil) {
-          geometry = models['cornerHole.stl'];
+          this._setType('cornerHole.stl');
           offsetY = this.settings.block.y / 2;
         }
         else {
-          geometry = models['corner.stl'];
+          this._setType('corner.stl');
         }
         if      (this.isOpenSides(BACK, LEFT))   rotateZ = -Math.PI / 2;
         else if (this.isOpenSides(BACK, RIGHT))  rotateZ =  Math.PI;
@@ -351,7 +364,7 @@ class Block {
       else if (!this.fromSide.equals(TOP) && this.toSide.equals(BOTTOM)) {
         if (this.nextBlock && this.nextBlock.toSide) {
           if (this.nextBlock.toSide.equals(BOTTOM)) {
-            geometry = models['verticalCurveHoleStart.stl'];
+            this._setType('verticalCurveHoleStart.stl');
             offsetY = this.settings.block.y / 2;
             if      (this.fromSide.equals(BACK))  rotateZ =  Math.PI;
             else if (this.fromSide.equals(LEFT))  rotateZ = -Math.PI / 2;
@@ -362,7 +375,7 @@ class Block {
                 (this.fromSide.equals(FRONT) && this.nextBlock.toSide.equals(BACK)) ||
                 (this.fromSide.equals(LEFT) && this.nextBlock.toSide.equals(RIGHT)) ||
                 (this.fromSide.equals(RIGHT) && this.nextBlock.toSide.equals(LEFT))) {
-              geometry = models['ramp.stl'];
+              this._setType('ramp.stl');
               if      (this.fromSide.equals(FRONT)) rotateZ =  Math.PI;
               else if (this.fromSide.equals(LEFT))  rotateZ =  Math.PI / 2;
               else if (this.fromSide.equals(RIGHT)) rotateZ = -Math.PI / 2;
@@ -371,8 +384,7 @@ class Block {
                 (this.fromSide.equals(FRONT) && this.nextBlock.toSide.equals(RIGHT)) ||
                 (this.fromSide.equals(LEFT) && this.nextBlock.toSide.equals(FRONT)) ||
                 (this.fromSide.equals(RIGHT) && this.nextBlock.toSide.equals(BACK))) {
-
-              geometry = models['rampCorner1.stl'];
+              this._setType('rampCorner1.stl');
               if      (this.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
               else if (this.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
               else if (this.fromSide.equals(RIGHT)) rotateZ =  Math.PI;
@@ -381,8 +393,7 @@ class Block {
                 (this.fromSide.equals(FRONT) && this.nextBlock.toSide.equals(LEFT)) ||
                 (this.fromSide.equals(LEFT) && this.nextBlock.toSide.equals(BACK)) ||
                 (this.fromSide.equals(RIGHT) && this.nextBlock.toSide.equals(FRONT))) {
-
-              geometry = models['rampCorner2.stl'];
+              this._setType('rampCorner2.stl');
               if      (this.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
               else if (this.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
               else if (this.fromSide.equals(RIGHT)) rotateZ =  Math.PI;
@@ -391,7 +402,20 @@ class Block {
           }
         }
       }
-      if (!geometry) return null;
+      /*
+      else if (this.fromSide.equals(TOP) && !this.toSide.equals(BOTTOM)) {
+        this._setType('verticalCurveHoleEnd.stl');
+        offsetY = this.settings.block.y / 2;
+        if      (this.toSide.equals(BACK))  rotateZ =  Math.PI;
+        else if (this.toSide.equals(LEFT))  rotateZ = -Math.PI / 2;
+        else if (this.toSide.equals(RIGHT)) rotateZ =  Math.PI / 2;
+        // TODO: 上に上がれるようにするならここにロジックを追加
+      }
+      else if (this.isOpenSides(TOP, BOTTOM)) {
+        this._setType('verticalHole1.stl');
+      }
+      */
+      if (!this.type) return null;
 
       let color = new THREE.Color(
         this.position.x / this.settings.world.x,
@@ -399,7 +423,7 @@ class Block {
         this.position.z / this.settings.world.z
       );
       let material = new THREE.MeshPhongMaterial({color: color});
-      this.mesh = new THREE.Mesh(geometry, material);
+      this.mesh = new THREE.Mesh(this.getGeometry(), material);
       this.mesh.rotation.x = -Math.PI / 2;
       this.mesh.rotation.z = rotateZ;
       this.mesh.userData['block'] = this;
