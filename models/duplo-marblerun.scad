@@ -20,9 +20,10 @@ pr = 2*dr + 2; // plate raster
 //smallPlate(); // simple pieces, each only once
 //bigPlate();     // more straight and corner pieces
 
-//translate([0,0,9.6*1]) straightPiece();
+translate([0,0,9.6*1]) straightPiece();
 //translate([0,0,9.6*1]) cornerPiece();
 //translate([0,0,9.6*2]) rampPiece();
+//translate([0,0,9.6*2]) rampHolePiece();
 //translate([0,0,9.6*2]) ramp2Piece();
 //translate([0,0,9.6*2]) longRampPiece();
 //translate([0,0,9.6*2]) cosinusSlopedRampPiece();
@@ -31,11 +32,13 @@ pr = 2*dr + 2; // plate raster
 //translate([0,0,9.6*2]) cornerHolePiece(); 
 //translate([0,0,9.6*2]) rampCornerPiece(steps=quality);
 //mirror([0,1,0]) translate([0,0,9.6*2])  rampCornerPiece(steps=quality);
+//translate([0,0,9.6*2]) rampCornerHolePiece(steps=quality);
+//mirror([0,1,0]) translate([0,0,9.6*2]) rampCornerHolePiece(steps=quality);
 //translate([0,0,9.6*1]) endPiece();
 //translate([0,0,9.6*1]) cornerVerticalHolePiece();//??
 //translate([0,0,9.6*1]) verticalHolePiece();
 //translate([0,0,9.6*2]) verticalCurveHoleStartPiece();
-translate([0,0,9.6*2]) verticalCurveHoleEndPiece();
+//translate([0,0,9.6*2]) verticalCurveHoleEndPiece();
 //translate([0, -35, -9.5])straightPiece();
 module verticalHolePiece() 
 {
@@ -186,6 +189,17 @@ module rampPiece()
    }
 }
 
+module rampHolePiece()
+{
+   angle = 30.964; // 180 / 3.14159 * atan(duploHeight/duploRaster);
+   vscale = 0.8575; // cos(angle);
+   difference() {
+      translate([0,0,9.6]) duploMarbleRunBase(2,2,6,true);
+      
+      translate([0,dr+1, 2*duploHeight+2]) rotate([90+angle,0,0]) scale([1,vscale,1])
+            cylinder( duploRaster*8, innerRadius, innerRadius,$fn = quality*2, true);   
+   }
+}
 module ramp2Piece()
 {
    angle = 16.699; // 180 / 3.14159 * atan(0.5*duploHeight/duploRaster);
@@ -258,6 +272,27 @@ module cornerRamp(steps) // nr of steps: e.g. coarse=10, fine=90
                 cylinder(h=50/steps,r=innerRadius, $fn=steps);
                 translate([-dr,-2,0]) cube([4*duploRaster,4*duploRaster,70/steps]);
              }
+      }
+   }
+}
+
+module rampCornerHolePiece(steps)
+{
+   difference() {
+      translate([0,0,9.6]) duploMarbleRunBase(2,2,6,true);
+      cornerRampHole(steps);      
+   }
+}
+
+module cornerRampHole(steps) // nr of steps: e.g. coarse=10, fine=90
+{
+   translate([-dr,-dr,2])
+   for(i=[0:90/steps:90])
+   {
+      rotate([0,0,i]) translate([dr,0,i/90*2*duploHeight]) {
+         // Using the rotate&shearing matrix produces nicer results with less steps.
+         multmatrix(m = [ [1, 0, 0, 0], [0, 0, 1, -50/steps], [0, 1, 0.4, 0], [0, 0, 0, 1] ]) 
+            cylinder(h=50/steps,r=innerRadius, $fn=steps);
       }
    }
 }

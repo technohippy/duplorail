@@ -126,6 +126,13 @@ class Cursor {
     this.spawnBlock();
   }
 
+  stop() {
+    if (!this.started) return;
+
+    this.started = false;
+    this.spawnBlock();
+  }
+
   verifyNextPosition(nextPosition) {
     let isInsideGrid = 0 <= nextPosition.x && nextPosition.x < this.settings.world.x && 
       0 <= nextPosition.y && nextPosition.y < this.settings.world.y &&
@@ -381,7 +388,12 @@ class Block {
               (this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(FRONT)) ||
               (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(LEFT)) ||
               (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(RIGHT))) {
-            this._setType('ramp.stl');
+            if (this.prevBlock.hasCeil(grid)) {
+              this._setType('rampHole.stl');
+            }
+            else {
+              this._setType('ramp.stl');
+            }
             if      (this.toSide.equals(BACK))  rotateZ =  Math.PI;
             else if (this.toSide.equals(LEFT))  rotateZ = -Math.PI / 2;
             else if (this.toSide.equals(RIGHT)) rotateZ =  Math.PI / 2;
@@ -390,7 +402,12 @@ class Block {
               (this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(RIGHT)) ||
               (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(FRONT)) ||
               (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(BACK))) {
-            this._setType('rampCorner1.stl');
+            if (this.prevBlock.hasCeil(grid)) {
+              this._setType('rampCornerHole1.stl');
+            }
+            else {
+              this._setType('rampCorner1.stl');
+            }
             if      (this.prevBlock.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
             else if (this.prevBlock.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
             else if (this.prevBlock.fromSide.equals(RIGHT)) rotateZ =  Math.PI;
@@ -399,7 +416,12 @@ class Block {
               (this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(LEFT)) ||
               (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(BACK)) ||
               (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(FRONT))) {
-            this._setType('rampCorner2.stl');
+            if (this.prevBlock.hasCeil(grid)) {
+              this._setType('rampCornerHole2.stl');
+            }
+            else {
+              this._setType('rampCorner2.stl');
+            }
             if      (this.prevBlock.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
             else if (this.prevBlock.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
             else if (this.prevBlock.fromSide.equals(RIGHT)) rotateZ =  Math.PI;
