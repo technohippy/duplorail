@@ -13,7 +13,8 @@ let models = {
   "verticalCurveHoleStart.stl":null,
   "verticalCurveHoleEnd.stl":null,
   "verticalHole.stl":null,
-  "verticalHole1.stl":null
+  "verticalHole1.stl":null,
+  "duplo-2x2x2.stl":null
   /*
   "ramp2.stl":null,
   "longRamp.stl":null,
@@ -56,8 +57,12 @@ class Cursor {
     this.settings = settings;
     this.position = new THREE.Vector3(0, this.settings.world.y - 1, 0);
     this.started = false;
-    this.track = new Track();
+    this.tracks = [new Track()];
     this.mesh = null;
+  }
+
+  getTrack() {
+    return this.tracks[0];
   }
 
   getMesh() {
@@ -95,9 +100,9 @@ class Cursor {
     let block = new Block(this.settings);
     block.position.copy(this.position);
     this.grid.set(block, this.position);
-    this.track.add(block);
+    this.getTrack().add(block);
     /*
-    let lastBlock = this.track.peek(1);
+    let lastBlock = this.getTrack().peek(1);
     if (lastBlock) {
       let mesh = lastBlock.getMesh(this.grid);
       if (mesh) {
@@ -106,8 +111,8 @@ class Cursor {
     }
     */
 
-    for (let i = 1; i < this.track.length; i++) {
-      let lastBlock = this.track.peek(i);
+    for (let i = 1; i < this.getTrack().length; i++) {
+      let lastBlock = this.getTrack().peek(i);
       if (lastBlock && !lastBlock.mesh) {
         let mesh = lastBlock.getMesh(this.grid);
         if (mesh) {
@@ -128,9 +133,13 @@ class Cursor {
 
   stop() {
     if (!this.started) return;
-
     this.started = false;
-    this.spawnBlock();
+    let mesh = this.getTrack().peek().getMesh(this.grid);
+    if (mesh) {
+      this.grid.getMesh().add(mesh);
+    }
+
+    this.tracks.unshift(new Track());
   }
 
   verifyNextPosition(nextPosition) {
@@ -143,7 +152,7 @@ class Cursor {
     if (isCrossRoad) return false;
 
     let upOrDown = nextPosition.clone().sub(this.position).y;
-    if (upOrDown !== 0 && this.track.length === 1) return false;
+    if (upOrDown !== 0 && this.getTrack().length === 1) return false;
     if (upOrDown !== 1) {
       let belowNextBlock = this.grid.get(nextPosition.clone().add(new THREE.Vector3(0, -1, 0)))
       let hasBelowRoad = belowNextBlock instanceof Block;
@@ -169,16 +178,21 @@ class Cursor {
   }
 
   moveInDirection(direction) {
-    let prevBlock = this.track.peek(1)
+    let prevBlock = this.getTrack().peek(1)
     let nextPosition = new THREE.Vector3().addVectors(this.position, direction);
-    if (this.started && prevBlock && prevBlock.position.equals(nextPosition)) {
-      return this.cancelLastMove();
-    }
-    else if (this.verifyNextPosition(nextPosition)) {
-      return this.moveTo(nextPosition);
+    if (this.started) {
+      if (prevBlock && prevBlock.position.equals(nextPosition)) {
+        return this.cancelLastMove();
+      }
+      else if (this.verifyNextPosition(nextPosition)) {
+        return this.moveTo(nextPosition);
+      }
+      else {
+        return null;
+      }
     }
     else {
-      return null;
+      return this.moveTo(nextPosition);
     }
   }
 
@@ -207,9 +221,9 @@ class Cursor {
   }
 
   cancelLastMove() {
-    var removedBlock = this.track.removeLast();
+    var removedBlock = this.getTrack().removeLast();
     this.grid.remove(removedBlock);
-    var lastBlock = this.track.peek();
+    var lastBlock = this.getTrack().peek();
     this.setPosition(lastBlock.position);
   }
 }
