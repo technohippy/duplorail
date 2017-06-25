@@ -44,6 +44,20 @@ function loadModel() {
 }
 loadModel();
 
+let toHole = {
+  "corner.stl":"cornerHole.stl",
+  "ramp.stl":"rampHole.stl",
+  "rampCorner1.stl":"rampCornerHole1.stl",
+  "rampCorner2.stl":"rampCornerHole2.stl",
+  "straight.stl": "straightHole.stl",
+  "end.stl":null,
+  "verticalCurveHoleStart.stl":null,
+  "verticalCurveHoleEnd.stl":null,
+  "verticalHole.stl":null,
+  "verticalHole1.stl":null,
+  "duplo-2x2x2.stl":null
+}
+
 const BOTTOM = new THREE.Vector3(0, -1, 0);
 const TOP = new THREE.Vector3(0, 1, 0);
 const LEFT = new THREE.Vector3(-1, 0, 0);
@@ -138,15 +152,54 @@ class Cursor {
     if (mesh) {
       this.grid.getMesh().add(mesh);
     }
+    //this.complete();
 
     this.tracks.unshift(new Track());
   }
 
-  verifyNextPosition(nextPosition) {
-    let isInsideGrid = 0 <= nextPosition.x && nextPosition.x < this.settings.world.x && 
+  complete() {
+    let needSupport = false;
+    for (let x = 0; x < this.settings.world.x; x++) {
+      for (let z = 0; z < this.settings.world.z; z++) {
+        needSupport = false;
+        for (let y = this.settings.world.y - 1; 0 <= y; y--) {
+          let block = this.grid.get({x:x, y:y, z:z});
+          if (block && block.mesh) {
+            if (needSupport) {
+              if (!block.isHole()) {
+                block.convertToHole();
+              }
+            }
+            else {
+              needSupport = true;
+            }
+          }
+          else if (!block && needSupport) {
+            let underBlock = this.grid.get({x:x, y:y-1, z:z});
+            if (!underBlock) {
+              let position = new THREE.Vector3(x, y, z);
+              let block = new Block(this.settings);
+              block.position.copy(position);
+              this.grid.set(block, position);
+              let mesh = block.getMesh(this.grid);
+              if (mesh) {
+                this.grid.getMesh().add(mesh);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  isInsideGrid(nextPosition) {
+    return 0 <= nextPosition.x && nextPosition.x < this.settings.world.x && 
       0 <= nextPosition.y && nextPosition.y < this.settings.world.y &&
       0 <= nextPosition.z && nextPosition.z < this.settings.world.z;
-    if (!isInsideGrid) return false;
+  }
+
+  verifyNextPosition(nextPosition) {
+    if (!this.isInsideGrid(nextPosition)) return false;
 
     let isCrossRoad = this.grid.get(nextPosition) instanceof Block;
     if (isCrossRoad) return false;
@@ -192,7 +245,9 @@ class Cursor {
       }
     }
     else {
-      return this.moveTo(nextPosition);
+      if (this.isInsideGrid(nextPosition)) {
+        return this.moveTo(nextPosition);
+      }
     }
   }
 
@@ -297,7 +352,6 @@ class Grid {
   }
 
   get(position) {
-    //return this.cells[position.x][position.y][position.z];
     let yzPlane = this.cells[position.x];
     if (yzPlane) {
       let zPlane = yzPlane[position.y];
@@ -316,6 +370,19 @@ class Grid {
     this.getMesh().remove(block.getMesh());
     this.set(null, block.position);
   }
+
+  showLayers(layer) {
+    for (let x = 0; x < this.settings.world.x; x++) {
+      for (let y = 0; y < this.settings.world.y; y++) {
+        for (let z = 0; z < this.settings.world.z; z++) {
+          let block = this.get({x:x, y:y, z:z});
+          if (block && block.mesh) {
+            block.mesh.material.visible = y < layer;
+          }
+        }
+      }
+    }
+  }
 }
 
 class Block {
@@ -330,12 +397,20 @@ class Block {
     this.nextBlock = null;
   }
 
+  isHole() {
+    if (!this.type) {
+      //throw 'type is null';
+      return true;
+    }
+    return this.type.match('Hole') !== null;
+  }
+
   isOpenSides(s1, s2) {
     return this.toSide && ((this.fromSide.equals(s1) && this.toSide.equals(s2)) || (this.fromSide.equals(s2) && this.toSide.equals(s1)));
   }
 
   _setType(type) {
-    console.log(`type: ${type}`);
+    //console.log(`type: ${type}`);
     this.type = type;
   }
 
@@ -347,7 +422,10 @@ class Block {
     let hasCeil = this.hasCeil(grid);
     if (!this.mesh) {
       let rotateZ = 0;
-      if (this.fromSide === null || this.toSide === null) {
+      if (this.fromSide === null && this.toSide === null) {
+        this._setType('duplo-2x2x2.stl');
+      }
+      else if (this.fromSide === null || this.toSide === null) {
         this._setType('end.stl');
         let openSide = this.fromSide || this.toSide;
         if      (openSide.equals(FRONT)) rotateZ =  Math.PI;
@@ -464,6 +542,18 @@ class Block {
       (this.position.z + 0.5) * this.settings.block.z
     );
     return this.mesh;
+  }
+
+  convertToHole() {
+    if (!this.mesh) throw 'invalid mesh';
+
+    let holeType = toHole[this.type];
+    if (holeType) {
+      let oldGeometry = this.mesh.geometry;
+      this._setType(holeType);
+      this.mesh.geometry = this.getGeometry();
+      oldGeometry.dispose();
+    }
   }
 
   isAdded() {

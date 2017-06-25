@@ -63,10 +63,15 @@
 
       document.addEventListener('keyup', (event) =>{
         if (event.key === ' ') {
-          cursor.start();
+          if (cursor.started) {
+            cursor.stop();
+          }
+          else {
+            cursor.start();
+          }
         }
         else if (event.key === 'Enter') {
-          cursor.stop();
+          cursor.complete();
         }
         else if (event.key === 'ArrowUp') {
           cursor.moveBack();
@@ -85,6 +90,10 @@
         }
         else if (event.key === 'z') {
           cursor.moveBottom();
+        }
+        else if (event.key.match(/^\d$/)) {
+          console.log(event.key);
+          grid.showLayers(parseInt(event.key, 10));
         }
       });
     </script>
