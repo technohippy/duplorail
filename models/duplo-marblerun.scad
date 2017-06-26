@@ -20,7 +20,7 @@ pr = 2*dr + 2; // plate raster
 //smallPlate(); // simple pieces, each only once
 //bigPlate();     // more straight and corner pieces
 
-translate([0,0,9.6*1]) straightPiece();
+//translate([0,0,9.6*1]) straightPiece();
 //translate([0,0,9.6*1]) cornerPiece();
 //translate([0,0,9.6*2]) rampPiece();
 //translate([0,0,9.6*2]) rampHolePiece();
@@ -35,9 +35,10 @@ translate([0,0,9.6*1]) straightPiece();
 //translate([0,0,9.6*2]) rampCornerHolePiece(steps=quality);
 //mirror([0,1,0]) translate([0,0,9.6*2]) rampCornerHolePiece(steps=quality);
 //translate([0,0,9.6*1]) endPiece();
+//translate([0,0,9.6*2]) endHolePiece();
 //translate([0,0,9.6*1]) cornerVerticalHolePiece();//??
 //translate([0,0,9.6*1]) verticalHolePiece();
-//translate([0,0,9.6*2]) verticalCurveHoleStartPiece();
+translate([0,0,9.6*2]) verticalCurveHoleStartPiece();
 //translate([0,0,9.6*2]) verticalCurveHoleEndPiece();
 //translate([0, -35, -9.5])straightPiece();
 module verticalHolePiece() 
@@ -150,6 +151,19 @@ module endPiece()
          translate([0,dr+2, duploHeight+2]) rotate([90,0,0])
             cylinder( dr+2, innerRadius, innerRadius,$fn = quality*2 );
          translate([0,0, duploHeight+2]) rotate([90,0,0])
+            sphere( innerRadius, $fn = quality*2 );
+      }
+   }
+}
+
+module endHolePiece()
+{
+   difference() {
+      duploMarbleRunBase(2,2,4,true);
+      union() {
+         translate([0,dr+2, 2]) rotate([90,0,0])
+            cylinder( dr+2, innerRadius, innerRadius,$fn = quality*2 );
+         translate([0,0, 2]) rotate([90,0,0])
             sphere( innerRadius, $fn = quality*2 );
       }
    }

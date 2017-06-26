@@ -91,6 +91,9 @@
         else if (event.key === 'z') {
           cursor.moveBottom();
         }
+        else if (event.key === 's') {
+          console.log(grid.getSummary());
+        }
         else if (event.key.match(/^\d$/)) {
           grid.showLayers(parseInt(event.key, 10));
         }

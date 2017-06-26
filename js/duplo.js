@@ -49,8 +49,9 @@ let toHole = {
   "ramp.stl":"rampHole.stl",
   "rampCorner1.stl":"rampCornerHole1.stl",
   "rampCorner2.stl":"rampCornerHole2.stl",
-  "straight.stl": "straightHole.stl",
-  "end.stl":null,
+  "straight.stl":"straightHole.stl",
+  //"end.stl":"endHole.stl",
+  "end.stl":"straightHole.stl",
   "verticalCurveHoleStart.stl":null,
   "verticalCurveHoleEnd.stl":null,
   "verticalHole.stl":null,
@@ -77,6 +78,10 @@ class Cursor {
 
   getTrack() {
     return this.tracks[0];
+  }
+
+  get track() {
+    return this.getTrack();
   }
 
   getMesh() {
@@ -147,12 +152,13 @@ class Cursor {
 
   stop() {
     if (!this.started) return;
+    if (this.track.peek().fromSide.equals(TOP)) return;
+
     this.started = false;
     let mesh = this.getTrack().peek().getMesh(this.grid);
     if (mesh) {
       this.grid.getMesh().add(mesh);
     }
-    //this.complete();
 
     this.tracks.unshift(new Track());
   }
@@ -303,7 +309,8 @@ class Grid {
   createMesh() {
     const block = this.settings.block;
     const world = this.settings.world;
-    let lineMaterial = new THREE.LineBasicMaterial({color: 0x000000, opacity:0.1, transparent:true});
+    let lineMaterial = new THREE.LineBasicMaterial({
+      color: 0x000000, opacity:0.1, transparent:true});
     let lineGeometry = new THREE.Geometry();
     for (let x = 0; x <= world.x; x++) {
       for (let y = 0; y <= world.y; y++) {
@@ -369,22 +376,44 @@ class Grid {
     this.cells[position.x][position.y][position.z] = block;
   }
 
+  forEach(handler) {
+    for (let x = 0; x < this.settings.world.x; x++) {
+      for (let y = 0; y < this.settings.world.y; y++) {
+        for (let z = 0; z < this.settings.world.z; z++) {
+          let position = new THREE.Vector3(x, y, z);
+          let block = this.get(position);
+          handler(block, position);
+        }
+      }
+    }
+  }
+
   remove(block) {
     block.prevBlock.removeNext();
     this.set(null, block.position);
   }
 
   showLayers(layer) {
-    for (let x = 0; x < this.settings.world.x; x++) {
-      for (let y = 0; y < this.settings.world.y; y++) {
-        for (let z = 0; z < this.settings.world.z; z++) {
-          let block = this.get({x:x, y:y, z:z});
-          if (block && block.mesh) {
-            block.mesh.material.visible = y < layer;
-          }
+    this.forEach((block, position) => {
+      if (block && block.mesh) {
+        block.mesh.material.visible = position.y < layer;
+      }
+    });
+  }
+
+  getSummary() {
+    let summary = {};
+    this.forEach((block) => {
+      if (block && block.type) {
+        if (summary[block.type]) {
+          summary[block.type] += 1;
+        }
+        else {
+          summary[block.type] = 1;
         }
       }
-    }
+    });
+    return summary;
   }
 }
 
