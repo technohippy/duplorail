@@ -15,10 +15,10 @@
       const SETTINGS = {
         world: {x:10, y:6, z:10},
         //block: {x:3.2, y:2, z:3.2},
-        //tube: {r:1.4}
+        //sphere: {r:1.4}
         //block: {x:31.7, y:42.75/2, z:31.7},
         block: {x:30, y:38/2, z:30},
-        tube: {r:14}
+        sphere: {r:14}
       };
 
       let scene = new THREE.Scene();
@@ -59,6 +59,13 @@
       controls.enableZoom = false;
       controls.enableKeys = false;
 
+      cursor.getMesh().material.visible = false;
+      grid.getMesh().material.visible = false;
+      Block.loadModels(() => {
+        cursor.getMesh().material.visible = true;
+        grid.getMesh().material.visible = true;
+      });
+
       render();
 
       document.addEventListener('keyup', (event) =>{
@@ -93,6 +100,9 @@
         }
         else if (event.key === 's') {
           console.log(grid.getSummary());
+        }
+        else if (event.key === 'r') {
+          cursor.reset();
         }
         else if (event.key.match(/^\d$/)) {
           grid.showLayers(parseInt(event.key, 10));

@@ -15,34 +15,19 @@ let models = {
   "verticalHole.stl":null,
   "verticalHole1.stl":null,
   "duplo-2x2x2.stl":null
-  /*
-  "ramp2.stl":null,
-  "longRamp.stl":null,
-  "crossing.stl":null,
-  "cosinusSlope.stl":null,
-  "verticalCurveHole.stl":null,
-  "duplo-2x1x4.stl":null,
-  "duplo-2x2x2.stl":null,
-  "duplo-2x2x4.stl":null,
-  "duplo-2x4x1.stl":null,
-  "duplo-2x4x2.stl":null,
-  "duplo-8x8-place.stl":null,
-  "duplo-8x8-plate.stl":null
-  */
+  //"ramp2.stl":null,
+  //"longRamp.stl":null,
+  //"crossing.stl":null,
+  //"cosinusSlope.stl":null,
+  //"verticalCurveHole.stl":null,
+  //"duplo-2x1x4.stl":null,
+  //"duplo-2x2x2.stl":null,
+  //"duplo-2x2x4.stl":null,
+  //"duplo-2x4x1.stl":null,
+  //"duplo-2x4x2.stl":null,
+  //"duplo-8x8-place.stl":null,
+  //"duplo-8x8-plate.stl":null
 };
-let modelNames = Object.keys(models);
-let loader = new THREE.STLLoader();
-function loadModel() {
-  let modelName = modelNames.pop();
-  if (modelName) {
-    loader.load(`models/${modelName}`, function (geometry) {
-      console.log(modelName);
-      models[modelName] = geometry;
-      loadModel();
-    });
-  }
-}
-loadModel();
 
 let toHole = {
   "corner.stl":"cornerHole.stl",
@@ -86,7 +71,7 @@ class Cursor {
 
   getMesh() {
     if (!this.mesh) {
-      let geometry = new THREE.SphereGeometry(this.settings.tube.r, 32, 32);
+      let geometry = new THREE.SphereGeometry(this.settings.sphere.r, 32, 32);
       let material = new THREE.MeshPhongMaterial({
         color: 0xff0000,
         depthTest:false,
@@ -108,8 +93,8 @@ class Cursor {
     this.mesh.position.set(
       (this.position.x + 0.5) * this.settings.block.x,
       //(this.position.y + 0.5) * this.settings.block.y
-      //  + (this.settings.tube.r - this.settings.block.y / 2)
-      //  + (this.settings.block.y - this.settings.tube.r),
+      //  + (this.settings.sphere.r - this.settings.block.y / 2)
+      //  + (this.settings.block.y - this.settings.sphere.r),
       (this.position.y + 0.5) * this.settings.block.y + this.settings.block.y / 2,
       (this.position.z + 0.5) * this.settings.block.z
     );
@@ -196,6 +181,16 @@ class Cursor {
         }
       }
     }
+    this.grid.getMesh().material.visible = false;
+    this.getMesh().material.visible = false;
+  }
+
+  reset() {
+    this.grid.reset();
+    this.tracks = [new Track()];
+    this.started = false;
+    this.setPosition({x:0, y:this.settings.world.y - 1, z:0});
+    this.mesh.material.visible = true;
   }
 
   isInsideGrid(nextPosition) {
@@ -393,6 +388,19 @@ class Grid {
     this.set(null, block.position);
   }
 
+  reset() {
+    if (this.mesh) {
+      this.forEach((block) => {
+        if (block && block.mesh) {
+          this.mesh.remove(block.mesh);
+          block.mesh.geometry.dispose();
+          block.mesh.material.dispose();
+        }
+      });
+      this.mesh.material.visible = true;
+    }
+  }
+
   showLayers(layer) {
     this.forEach((block, position) => {
       if (block && block.mesh) {
@@ -418,6 +426,34 @@ class Grid {
 }
 
 class Block {
+  static loadModels(callback) {
+    var modelNames = Object.keys(models);
+    let loader = new THREE.STLLoader();
+    function loadModel() {
+      let modelName = modelNames.pop();
+      if (modelName) {
+        loader.load(`models/${modelName}`, (geometry) => {
+          models[modelName] = geometry;
+          loadModel();
+        });
+      }
+    }
+    loadModel();
+
+    function checkModelLoad() {
+      for (let modelName in models) {
+        if (modelName) {
+          if (models[modelName] === null) {
+            setTimeout(checkModelLoad, 100);
+            return;
+          }
+        }
+      }
+      callback();
+    }
+    checkModelLoad();
+  }
+
   constructor(settings) {
     this.settings = settings;
     this.position = new THREE.Vector3(-1, -1, -1);
