@@ -256,7 +256,10 @@ class Cursor {
   }
 
   moveTop() {
-    return this.moveInDirection(TOP);
+    let nextPosition = new THREE.Vector3().addVectors(this.position, TOP);
+    if (!this.started || this.grid.get(nextPosition)) {
+      return this.moveInDirection(TOP);
+    }
   }
 
   moveLeft() {
@@ -367,7 +370,8 @@ class Grid {
   }
 
   remove(block) {
-    this.getMesh().remove(block.getMesh());
+    let prevBlock = block.prevBlock;
+    prevBlock.removeNext();
     this.set(null, block.position);
   }
 
@@ -568,6 +572,17 @@ class Block {
       }
     }
     return false;
+  }
+
+  removeNext() {
+    if (this.mesh) {
+      this.mesh.parent.remove(this.mesh);
+      this.mesh.geometry.dispose();
+      this.mesh.material.dispose();
+      this.mesh = null;
+    }
+    this.nextBlock = null;
+    this.toSide = null;
   }
 }
 
