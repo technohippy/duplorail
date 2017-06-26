@@ -370,8 +370,7 @@ class Grid {
   }
 
   remove(block) {
-    let prevBlock = block.prevBlock;
-    prevBlock.removeNext();
+    block.prevBlock.removeNext();
     this.set(null, block.position);
   }
 
