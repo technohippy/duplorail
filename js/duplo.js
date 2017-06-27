@@ -10,6 +10,7 @@ let models = {
   "rampCornerHole2.stl":null,
   "straight.stl":null,
   "straightHole.stl":null,
+  "verticalCurveStart.stl":null,
   "verticalCurveHoleStart.stl":null,
   "verticalCurveHoleEnd.stl":null,
   "verticalHole.stl":null,
@@ -37,7 +38,7 @@ let toHole = {
   "straight.stl":"straightHole.stl",
   //"end.stl":"endHole.stl",
   "end.stl":"straightHole.stl",
-  "verticalCurveHoleStart.stl":null,
+  "verticalCurveStart.stl":"verticalCurveHoleStart.stl",
   "verticalCurveHoleEnd.stl":null,
   "verticalHole.stl":null,
   "verticalHole1.stl":null,
@@ -530,7 +531,12 @@ class Block {
       }
       else if (!this.fromSide.equals(TOP) && this.toSide.equals(BOTTOM)) {
         if (this.nextBlock && this.nextBlock.toSide && this.nextBlock.toSide.equals(BOTTOM)) {
-          this._setType('verticalCurveHoleStart.stl');
+          if (hasCeil) {
+            this._setType('verticalCurveHoleStart.stl');
+          }
+          else {
+            this._setType('verticalCurveStart.stl');
+          }
           if      (this.fromSide.equals(BACK))  rotateZ =  Math.PI;
           else if (this.fromSide.equals(LEFT))  rotateZ = -Math.PI / 2;
           else if (this.fromSide.equals(RIGHT)) rotateZ =  Math.PI / 2;

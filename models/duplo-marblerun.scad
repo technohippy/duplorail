@@ -38,7 +38,8 @@ pr = 2*dr + 2; // plate raster
 //translate([0,0,9.6*2]) endHolePiece();
 //translate([0,0,9.6*1]) cornerVerticalHolePiece();//??
 //translate([0,0,9.6*1]) verticalHolePiece();
-translate([0,0,9.6*2]) verticalCurveHoleStartPiece();
+//translate([0,0,9.6*2]) verticalCurveHoleStartPiece();
+translate([0,0,9.6*1]) verticalCurveStartPiece();
 //translate([0,0,9.6*2]) verticalCurveHoleEndPiece();
 //translate([0, -35, -9.5])straightPiece();
 module verticalHolePiece() 
@@ -60,6 +61,21 @@ module verticalCurveHoleStartPiece()
           
       }
       translate([0, 0, -dr - 7]) cylinder(r=innerRadius, h=duploHeight * 2, center=true, $fn = quality * 2);
+   }
+}
+
+module verticalCurveStartPiece()
+{
+   difference() {
+      duploMarbleRunBase(2,2,2,false);
+      translate([0,0,dr/1.67]) {
+        difference() {
+            rotate([0, 90, 0]) translate([dr,-dr,0])rotate_extrude(convexity = 10, $fn = quality * 2) translate([dr, 0, 0]) circle(r = innerRadius, $fn = quality*2);
+            translate([0, 0, -dr * 1.5]) duplo(2,6,2,false, true, true);
+          
+        }
+        translate([0, 0, -dr - 7]) cylinder(r=innerRadius, h=duploHeight * 2, center=true, $fn = quality * 2);
+     }
    }
 }
 
