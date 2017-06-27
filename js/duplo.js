@@ -131,6 +131,7 @@ class Cursor {
 
   start() {
     if (this.started) return;
+    if (this.grid.get(this.position)) return;
 
     this.started = true;
     this.spawnBlock();
@@ -184,6 +185,7 @@ class Cursor {
     }
     this.grid.getMesh().material.visible = false;
     this.getMesh().material.visible = false;
+    this.grid.showAllLayers();
   }
 
   reset() {
@@ -238,8 +240,6 @@ class Cursor {
     if (this.started) {
       if (prevBlock && prevBlock.position.equals(nextPosition)) {
         this.cancelLastMove();
-        console.log(`prevBlock:           ${prevBlock.type}`);
-        console.log(`prevBlock.prevBlock: ${prevBlock.prevBlock.type}`);
         if (prevBlock.prevBlock && 0 <= ['verticalCurveStart.stl', 'verticalHole1.stl'].indexOf(prevBlock.prevBlock.type)) {
           prevBlock.prevBlock.removeNext();
         }
@@ -260,13 +260,19 @@ class Cursor {
   }
 
   moveBottom() {
-    return this.moveInDirection(BOTTOM);
+    const block = this.moveInDirection(BOTTOM);
+    if (block) {
+      this.grid.hilightLayers(this.position.y);
+    }
+    return block;
   }
 
   moveTop() {
     let nextPosition = new THREE.Vector3().addVectors(this.position, TOP);
     if (!this.started || this.grid.get(nextPosition)) {
-      return this.moveInDirection(TOP);
+      const block = this.moveInDirection(TOP);
+      this.grid.hilightLayers(this.position.y + 1);
+      return block;
     }
   }
 
@@ -314,7 +320,9 @@ class Grid {
     let lineMaterial = new THREE.LineBasicMaterial({
       color: 0x000000, opacity:0.1, transparent:true});
     let lineGeometry = new THREE.Geometry();
-    for (let x = 0; x <= world.x; x++) {
+    //for (let x = 0; x <= world.x; x++) {
+    //  for (let y = 0; y <= world.y; y++) {
+    for (let x = 0; x <= world.x; x += world.x) {
       for (let y = 0; y <= world.y; y++) {
         lineGeometry.vertices.push(
           new THREE.Vector3(block.x * x, block.y * y, 0),
@@ -322,14 +330,17 @@ class Grid {
         );
       }
     }
+    //for (let y = 0; y <= world.y; y++) {
+    //  for (let z = 0; z <= world.z; z++) {
     for (let y = 0; y <= world.y; y++) {
-      for (let z = 0; z <= world.z; z++) {
+      for (let z = 0; z <= world.z; z += world.z) {
         lineGeometry.vertices.push(
           new THREE.Vector3(0,                 block.y * y, block.z * z),
           new THREE.Vector3(block.x * world.x, block.y * y, block.z * z)
         );
       }
     }
+    /*
     for (let z = 0; z <= world.z; z++) {
       for (let x = 0; x <= world.x; x++) {
         lineGeometry.vertices.push(
@@ -338,6 +349,7 @@ class Grid {
         );
       }
     }
+    */
     let lineSegments = new THREE.LineSegments(lineGeometry, lineMaterial);
     lineSegments.position.set(
       -block.x * world.x / 2,
@@ -408,10 +420,34 @@ class Grid {
     }
   }
 
+  showAllLayers() {
+    this.showLayers(-1);
+  }
+
   showLayers(layer) {
     this.forEach((block, position) => {
       if (block && block.mesh) {
-        block.mesh.material.visible = position.y < layer;
+        if (layer < 0 || position.y < layer) {
+          block.mesh.material.opacity = 1.0;
+          block.mesh.material.visible = true;
+        }
+        else {
+          block.mesh.material.visible = false;
+        }
+      }
+    });
+  }
+
+  hilightLayers(layer) {
+    this.forEach((block, position) => {
+      if (block && block.mesh) {
+        block.mesh.material.visible = true;
+        if (layer < 0 || position.y < layer) {
+          block.mesh.material.opacity = 1.0;
+        }
+        else {
+          block.mesh.material.opacity = 0.2;
+        }
       }
     });
   }
@@ -610,7 +646,7 @@ class Block {
         this.position.y / this.settings.world.y,
         this.position.z / this.settings.world.z
       );
-      let material = new THREE.MeshPhongMaterial({color: color});
+      let material = new THREE.MeshPhongMaterial({color: color, transparent:true, opacity:1.0});
       this.mesh = new THREE.Mesh(this.getGeometry(), material);
       this.mesh.rotation.x = -Math.PI / 2;
       this.mesh.rotation.z = rotateZ;
@@ -696,4 +732,3 @@ class Track {
     return this.track.length;
   }
 }
-
