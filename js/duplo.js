@@ -237,7 +237,13 @@ class Cursor {
     let nextPosition = new THREE.Vector3().addVectors(this.position, direction);
     if (this.started) {
       if (prevBlock && prevBlock.position.equals(nextPosition)) {
-        return this.cancelLastMove();
+        this.cancelLastMove();
+        console.log(`prevBlock:           ${prevBlock.type}`);
+        console.log(`prevBlock.prevBlock: ${prevBlock.prevBlock.type}`);
+        if (prevBlock.prevBlock && 0 <= ['verticalCurveStart.stl', 'verticalHole1.stl'].indexOf(prevBlock.prevBlock.type)) {
+          prevBlock.prevBlock.removeNext();
+        }
+        return;
       }
       else if (this.verifyNextPosition(nextPosition)) {
         return this.moveTo(nextPosition);
@@ -650,6 +656,7 @@ class Block {
       this.mesh.geometry.dispose();
       this.mesh.material.dispose();
       this.mesh = null;
+      this.type = null;
     }
     this.nextBlock = null;
     this.toSide = null;
