@@ -9,7 +9,7 @@
 // The duplo-block-lib is derived from http://www.thingiverse.com/thing:1778
 include <duplo-block-lib.scad>
 
-quality = 50; // quality: low/fast (e.g. 10) for design, high/slow (e.g. 50) for final rendering 
+quality = 10; // quality: low/fast (e.g. 10) for design, high/slow (e.g. 50) for final rendering 
 innerRadius=14*dr/16;
 
 pr = 2*dr + 2; // plate raster
@@ -21,15 +21,15 @@ pr = 2*dr + 2; // plate raster
 //bigPlate();     // more straight and corner pieces
 
 //translate([0,0,9.6*1]) straightPiece();
+//translate([0,0,9.6*2]) straightHolePiece(); 
 //translate([0,0,9.6*1]) cornerPiece();
+//translate([0,0,9.6*2]) cornerHolePiece(); 
 //translate([0,0,9.6*2]) rampPiece();
 //translate([0,0,9.6*2]) rampHolePiece();
 //translate([0,0,9.6*2]) ramp2Piece();
 //translate([0,0,9.6*2]) longRampPiece();
 //translate([0,0,9.6*2]) cosinusSlopedRampPiece();
 //translate([0,0,9.6*1]) crossingPiece();
-//translate([0,0,9.6*2]) straightHolePiece(); 
-//translate([0,0,9.6*2]) cornerHolePiece(); 
 //translate([0,0,9.6*2]) rampCornerPiece(steps=quality);
 //mirror([0,1,0]) translate([0,0,9.6*2])  rampCornerPiece(steps=quality);
 //translate([0,0,9.6*2]) rampCornerHolePiece(steps=quality);
@@ -39,8 +39,8 @@ pr = 2*dr + 2; // plate raster
 //translate([0,0,9.6*1]) cornerVerticalHolePiece();//??
 //translate([0,0,9.6*1]) verticalHolePiece();
 //translate([0,0,9.6*2]) verticalCurveHoleStartPiece();
-translate([0,0,9.6*1]) verticalCurveStartPiece();
-//translate([0,0,9.6*2]) verticalCurveHoleEndPiece();
+//translate([0,0,9.6*1]) verticalCurveStartPiece();
+translate([0,0,9.6*2]) verticalCurveHoleEndPiece();
 //translate([0, -35, -9.5])straightPiece();
 module verticalHolePiece() 
 {

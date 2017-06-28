@@ -1,4 +1,22 @@
 let models = {
+  "corner_low.stl":null,
+  "corner_hole_low.stl":null,
+  "straight_low.stl":null,
+  "straight_hole_low.stl":null,
+  "ramp_low.stl":null,
+  "ramp_hole_low.stl":null,
+  "rampCorner1_low.stl":null,
+  "rampCorner2_low.stl":null,
+  "rampCorner1_hole_low.stl":null,
+  "rampCorner2_hole_low.stl":null,
+  "end_low.stl":null,
+  "verticalHole_low.stl":null,
+  "verticalCurveStart_low.stl":null,
+  "verticalCurveStart_hole_low.stl":null,
+  "verticalCurveEnd_hole_low.stl":null,
+  "duplo-2x2x2_low.stl":null
+
+  /*
   "corner.stl":null,
   "cornerHole.stl":null,
   "end.stl":null,
@@ -16,6 +34,8 @@ let models = {
   "verticalHole.stl":null,
   "verticalHole1.stl":null,
   "duplo-2x2x2.stl":null
+  */
+  //"ramp2_low.stl":null,
   //"ramp2.stl":null,
   //"longRamp.stl":null,
   //"crossing.stl":null,
@@ -31,6 +51,16 @@ let models = {
 };
 
 let toHole = {
+  "corner_low.stl":"corner_hole_low.stl",
+  "straight_low.stl":"straight_hole_low.stl",
+  "ramp_low.stl":"ramp_hole_low.stl",
+  "rampCorner1_low.stl":"rampCorner1_hole_low.stl",
+  "rampCorner2_low.stl":"rampCorner2_hole_low.stl",
+  "end_low.stl":"straight_hole_low.stl",
+  "verticalCurveStart_low.stl":"verticalCurveStart_hole_low.stl",
+  "verticalCurveStart_hole_low.stl":null,
+  "verticalCurveEnd_low.stl":null,
+
   "corner.stl":"cornerHole.stl",
   "ramp.stl":"rampHole.stl",
   "rampCorner1.stl":"rampCornerHole1.stl",
@@ -240,7 +270,7 @@ class Cursor {
     if (this.started) {
       if (prevBlock && prevBlock.position.equals(nextPosition)) {
         this.cancelLastMove();
-        if (prevBlock.prevBlock && 0 <= ['verticalCurveStart.stl', 'verticalHole1.stl'].indexOf(prevBlock.prevBlock.type)) {
+        if (prevBlock.prevBlock && 0 <= ['verticalCurveStart.stl', 'verticalHole_low.stl'].indexOf(prevBlock.prevBlock.type)) {
           prevBlock.prevBlock.removeNext();
         }
         return;
@@ -513,7 +543,7 @@ class Block {
       //throw 'type is null';
       return true;
     }
-    return this.type.match('Hole') !== null;
+    return this.type.match('Hole') !== null || this.type.match('_hole') !== null;
   }
 
   isOpenSides(s1, s2) {
@@ -534,10 +564,10 @@ class Block {
     if (!this.mesh) {
       let rotateZ = 0;
       if (this.fromSide === null && this.toSide === null) {
-        this._setType('duplo-2x2x2.stl');
+        this._setType('duplo-2x2x2_low.stl');
       }
       else if (this.fromSide === null || this.toSide === null) {
-        this._setType('end.stl');
+        this._setType('end_low.stl');
         let openSide = this.fromSide || this.toSide;
         if      (openSide.equals(FRONT)) rotateZ =  Math.PI;
         else if (openSide.equals(LEFT))  rotateZ =  Math.PI / 2;
@@ -545,27 +575,27 @@ class Block {
       }
       else if (this.isOpenSides(LEFT, RIGHT)) {
         if (hasCeil) {
-          this._setType('straightHole.stl');
+          this._setType('straight_hole_low.stl');
         }
         else {
-          this._setType('straight.stl');
+          this._setType('straight_low.stl');
         }
         rotateZ = Math.PI / 2;
       }
       else if (this.isOpenSides(FRONT, BACK)) {
         if (hasCeil) {
-          this._setType('straightHole.stl');
+          this._setType('straight_hole_low.stl');
         }
         else {
-          this._setType('straight.stl');
+          this._setType('straight_low.stl');
         }
       }
       else if (this.fromSide.clone().sub(this.toSide).y === 0) {
         if (hasCeil) {
-          this._setType('cornerHole.stl');
+          this._setType('corner_hole_low.stl');
         }
         else {
-          this._setType('corner.stl');
+          this._setType('corner_low.stl');
         }
         if      (this.isOpenSides(BACK, LEFT))   rotateZ = -Math.PI / 2;
         else if (this.isOpenSides(BACK, RIGHT))  rotateZ =  Math.PI;
@@ -574,10 +604,10 @@ class Block {
       else if (!this.fromSide.equals(TOP) && this.toSide.equals(BOTTOM)) {
         if (this.nextBlock && this.nextBlock.toSide && this.nextBlock.toSide.equals(BOTTOM)) {
           if (hasCeil) {
-            this._setType('verticalCurveHoleStart.stl');
+            this._setType('verticalCurveStart_hole_low.stl');
           }
           else {
-            this._setType('verticalCurveStart.stl');
+            this._setType('verticalCurveStart_low.stl');
           }
           if      (this.fromSide.equals(BACK))  rotateZ =  Math.PI;
           else if (this.fromSide.equals(LEFT))  rotateZ = -Math.PI / 2;
@@ -586,7 +616,7 @@ class Block {
       }
       else if (this.fromSide.equals(TOP) && !this.toSide.equals(BOTTOM)) {
         if (this.prevBlock.fromSide.equals(TOP)) {
-          this._setType('verticalCurveHoleEnd.stl');
+          this._setType('verticalCurveEnd_hole_low.stl');
           if      (this.toSide.equals(BACK))  rotateZ =  Math.PI;
           else if (this.toSide.equals(LEFT))  rotateZ = -Math.PI / 2;
           else if (this.toSide.equals(RIGHT)) rotateZ =  Math.PI / 2;
@@ -597,10 +627,10 @@ class Block {
               (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(LEFT)) ||
               (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(RIGHT))) {
             if (this.prevBlock.hasCeil(grid)) {
-              this._setType('rampHole.stl');
+              this._setType('ramp_hole_low.stl');
             }
             else {
-              this._setType('ramp.stl');
+              this._setType('ramp_low.stl');
             }
             if      (this.toSide.equals(BACK))  rotateZ =  Math.PI;
             else if (this.toSide.equals(LEFT))  rotateZ = -Math.PI / 2;
@@ -611,10 +641,10 @@ class Block {
               (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(FRONT)) ||
               (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(BACK))) {
             if (this.prevBlock.hasCeil(grid)) {
-              this._setType('rampCornerHole1.stl');
+              this._setType('rampCorner1_hole_low.stl');
             }
             else {
-              this._setType('rampCorner1.stl');
+              this._setType('rampCorner1_low.stl');
             }
             if      (this.prevBlock.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
             else if (this.prevBlock.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
@@ -625,10 +655,10 @@ class Block {
               (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(BACK)) ||
               (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(FRONT))) {
             if (this.prevBlock.hasCeil(grid)) {
-              this._setType('rampCornerHole2.stl');
+              this._setType('rampCorner2_hole_low.stl');
             }
             else {
-              this._setType('rampCorner2.stl');
+              this._setType('rampCorner2_low.stl');
             }
             if      (this.prevBlock.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
             else if (this.prevBlock.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
@@ -637,14 +667,14 @@ class Block {
         }
       }
       else if (this.isOpenSides(TOP, BOTTOM) && this.nextBlock && this.nextBlock.isOpenSides(TOP, BOTTOM)) {
-        this._setType('verticalHole1.stl');
+        this._setType('verticalHole_low.stl');
       }
       if (!this.type) return null;
 
       let color = new THREE.Color(
-        this.position.x / this.settings.world.x,
+        1.0, //this.position.x / this.settings.world.x,
         this.position.y / this.settings.world.y,
-        this.position.z / this.settings.world.z
+        0.2  //this.position.z / this.settings.world.z
       );
       let material = new THREE.MeshPhongMaterial({color: color, transparent:true, opacity:1.0});
       this.mesh = new THREE.Mesh(this.getGeometry(), material);
