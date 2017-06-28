@@ -62,11 +62,7 @@
       controls.addEventListener( 'change', render ); // remove when using animation loop
       controls.enableZoom = false;
       controls.enableKeys = false;
-	  controls.minPolarAngle = Math.PI / 5;
-	  controls.maxPolarAngle = Math.PI / 5 * 2;
-      controls.minAzimuthAngle = -Math.PI / 8;
-      controls.maxAzimuthAngle = Math.PI / 8;
-  	  controls.rotateSpeed = 0.7;
+      restrictControls(controls);
 
       cursor.getMesh().material.visible = false;
       grid.getMesh().material.visible = false;
@@ -76,6 +72,22 @@
       });
 
       render();
+
+      function restrictControls(controls) {
+        controls.minPolarAngle = Math.PI / 5;
+        controls.maxPolarAngle = Math.PI / 5 * 2;
+        controls.minAzimuthAngle = -Math.PI / 6;
+        controls.maxAzimuthAngle = Math.PI / 6;
+        controls.rotateSpeed = 0.7;
+      }
+
+      function freeControls(controls) {
+        controls.minPolarAngle = 0;
+        controls.maxPolarAngle = Math.PI;
+        controls.minAzimuthAngle = -Infinity;
+        controls.maxAzimuthAngle = Infinity;
+        controls.rotateSpeed = 1.0;
+      }
 
       document.addEventListener('keyup', (event) =>{
         if (event.key === ' ') {
@@ -88,6 +100,7 @@
         }
         else if (event.key === 'Enter') {
           cursor.complete();
+          freeControls(controls);
         }
         else if (event.key === 'ArrowUp') {
           cursor.moveBack();
@@ -112,6 +125,7 @@
         }
         else if (event.key === 'r') {
           cursor.reset();
+          restrictControls(controls);
         }
         else if (event.key.match(/^\d$/)) {
           grid.showLayers(parseInt(event.key, 10));

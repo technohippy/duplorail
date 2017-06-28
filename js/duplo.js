@@ -353,7 +353,7 @@ class Grid {
     //for (let x = 0; x <= world.x; x++) {
     //  for (let y = 0; y <= world.y; y++) {
     for (let x = 0; x <= world.x; x += world.x) {
-      for (let y = 0; y <= world.y; y++) {
+      for (let y = 0; y < world.y; y++) {
         lineGeometry.vertices.push(
           new THREE.Vector3(block.x * x, block.y * y, 0),
           new THREE.Vector3(block.x * x, block.y * y, block.z * world.z)
@@ -362,7 +362,7 @@ class Grid {
     }
     //for (let y = 0; y <= world.y; y++) {
     //  for (let z = 0; z <= world.z; z++) {
-    for (let y = 0; y <= world.y; y++) {
+    for (let y = 0; y < world.y; y++) {
       for (let z = 0; z <= world.z; z += world.z) {
         lineGeometry.vertices.push(
           new THREE.Vector3(0,                 block.y * y, block.z * z),
@@ -448,6 +448,7 @@ class Grid {
       });
       this.mesh.material.visible = true;
     }
+    this.cells = this.buildCells();
   }
 
   showAllLayers() {
