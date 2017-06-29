@@ -115,9 +115,9 @@ class Cursor {
 
   getMesh() {
     if (!this.mesh) {
-      let geometry = new THREE.SphereGeometry(this.settings.sphere.r, 32, 32);
+      let geometry = new THREE.BoxGeometry(this.settings.block.x, 0.1, this.settings.block.z);
       let material = new THREE.MeshPhongMaterial({
-        color: 0xff0000,
+        color: 0x00ff00,
         depthTest:false,
         transparent:true
       });
@@ -139,7 +139,7 @@ class Cursor {
       //(this.position.y + 0.5) * this.settings.block.y
       //  + (this.settings.sphere.r - this.settings.block.y / 2)
       //  + (this.settings.block.y - this.settings.sphere.r),
-      (this.position.y + 0.5) * this.settings.block.y + this.settings.block.y / 2,
+      (this.position.y + 0.5) * this.settings.block.y - this.settings.block.y / 2,
       (this.position.z + 0.5) * this.settings.block.z
     );
   }
