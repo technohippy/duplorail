@@ -14,7 +14,8 @@ let models = {
   "verticalCurveStart_low.stl":null,
   "verticalCurveStart_hole_low.stl":null,
   "verticalCurveEnd_hole_low.stl":null,
-  "duplo-2x2x2_low.stl":null
+  "duplo-2x2x2_low.stl":null,
+  "duplo-5x5x0.5_low.stl":null
 
   /*
   "corner.stl":null,
@@ -73,6 +74,18 @@ let toHole = {
   "verticalHole.stl":null,
   "verticalHole1.stl":null,
   "duplo-2x2x2.stl":null
+}
+
+function getModel(name) {
+  return models[name];
+}
+
+function getGroundMesh() {
+  let geom = getModel('duplo-5x5x0.5_low.stl');
+  let material = new THREE.MeshPhongMaterial({color:0xcccccc});
+  let mesh = new THREE.Mesh(geom, material);
+  mesh.rotation.x = -Math.PI / 2;
+  return mesh;
 }
 
 const BOTTOM = new THREE.Vector3(0, -1, 0);
@@ -291,9 +304,9 @@ class Cursor {
 
   moveBottom() {
     const block = this.moveInDirection(BOTTOM);
-    if (block) {
-      this.grid.hilightLayers(this.position.y);
-    }
+    this.grid.hilightLayers(this.position.y);
+    this.grid.board.setPosition(this.position.y);
+    this.grid.board.show();
     return block;
   }
 
@@ -301,7 +314,9 @@ class Cursor {
     let nextPosition = new THREE.Vector3().addVectors(this.position, TOP);
     if (!this.started || this.grid.get(nextPosition)) {
       const block = this.moveInDirection(TOP);
-      this.grid.hilightLayers(this.position.y + 1);
+      this.grid.hilightLayers(this.position.y);
+      this.grid.board.setPosition(this.position.y);
+      this.grid.board.show();
       return block;
     }
   }
@@ -330,16 +345,75 @@ class Cursor {
   }
 }
 
+class Board {
+  constructor(settings) {
+    this.settings = settings;
+    this.mesh = null;
+    this.layer = this.settings.world.y - 1;
+  }
+
+  getMesh() {
+    if (!this.mesh) {
+      this.mesh = this.createMesh();
+    }
+    this.setPosition(this.layer);
+    return this.mesh;
+  }
+
+  createMesh() {
+    const block = this.settings.block;
+    const world = this.settings.world;
+    let lineMaterial = new THREE.LineBasicMaterial({
+      color: 0x0000ff, opacity:0.2, transparent:true});
+    let lineGeometry = new THREE.Geometry();
+    for (let x = 0; x <= world.x; x++) {
+      lineGeometry.vertices.push(
+        new THREE.Vector3(block.x * x, 0, 0),
+        new THREE.Vector3(block.x * x, 0, block.z * world.z)
+      );
+    }
+    for (let z = 0; z <= world.z; z++) {
+      lineGeometry.vertices.push(
+        new THREE.Vector3(0,                 0, block.z * z),
+        new THREE.Vector3(block.x * world.x, 0, block.z * z)
+      );
+    }
+    let lineSegments = new THREE.LineSegments(lineGeometry, lineMaterial);
+    return lineSegments;
+  }
+
+  setPosition(layer) {
+    this.layer = layer;
+    if (this.mesh) {
+      this.mesh.position.y = this.settings.block.y * layer;
+    }
+  }
+
+  show() {
+    if (this.mesh) {
+      this.mesh.material.visible = true;
+    }
+  }
+
+  hide() {
+    if (this.mesh) {
+      this.mesh.material.visible = false;
+    }
+  }
+}
+
 class Grid {
   constructor(settings) {
     this.settings = settings;
     this.cells = this.buildCells();
+    this.board = new Board(this.settings);
     this.mesh = null;
   }
 
   getMesh() {
     if (!this.mesh) {
       this.mesh = this.createMesh();
+      this.mesh.add(this.board.getMesh());
     }
     return this.mesh;
   }
@@ -456,6 +530,7 @@ class Grid {
   }
 
   showLayers(layer) {
+    this.board.hide();
     this.forEach((block, position) => {
       if (block && block.mesh) {
         if (layer < 0 || position.y < layer) {
@@ -470,14 +545,16 @@ class Grid {
   }
 
   hilightLayers(layer) {
+    console.log(layer);
     this.forEach((block, position) => {
       if (block && block.mesh) {
         block.mesh.material.visible = true;
-        if (layer < 0 || position.y < layer) {
+        if (layer < 0 || position.y === layer) {
           block.mesh.material.opacity = 1.0;
         }
         else {
           block.mesh.material.opacity = 0.2;
+          //block.mesh.material.opacity = 1.0;
         }
       }
     });

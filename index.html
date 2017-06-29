@@ -13,7 +13,7 @@
     <script src="js/duplo.js"></script>
     <script>
       const SETTINGS = {
-        world: {x:10, y:6, z:10},
+        world: {x:10, y:5, z:10},
         //block: {x:3.2, y:2, z:3.2},
         //sphere: {r:1.4}
         //block: {x:31.7, y:42.75/2, z:31.7},
@@ -22,11 +22,11 @@
       };
 
       let scene = new THREE.Scene();
-      let camera = new THREE.PerspectiveCamera( 75, window.innerWidth/window.innerHeight, 0.1, 1000 );
+      let camera = new THREE.PerspectiveCamera( 50, window.innerWidth/window.innerHeight, 0.1, 1000 );
 
       let renderer = new THREE.WebGLRenderer();
       renderer.setSize( window.innerWidth, window.innerHeight );
-      renderer.setClearColor(0xffffff);
+      renderer.setClearColor(0xccffaa);
       document.body.appendChild( renderer.domElement );
 
       let grid = new Grid(SETTINGS);
@@ -43,10 +43,10 @@
       directionalLight.position.set(1, -0.8, -0.6);
       scene.add(directionalLight);
 
-      let ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
+      let ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
       scene.add(ambientLight);
 
-      const scale = 1.0;
+      const scale = 1.1;
       camera.position.set(
         0,//SETTINGS.block.x * SETTINGS.world.x * 0.3 * scale,
         SETTINGS.block.y * SETTINGS.world.y * 2 * scale,
@@ -69,6 +69,16 @@
       Block.loadModels(() => {
         cursor.getMesh().material.visible = true;
         grid.getMesh().material.visible = true;
+        for (let x = 0; x < 4; x++) {
+          for (let z = 0; z < 4; z++) {
+            let mesh = getGroundMesh();
+            mesh.position.x = grid.settings.block.x * (x + 0.5) * 2.5;
+            mesh.position.y = -grid.settings.block.y * 0.2;
+            mesh.position.z = grid.settings.block.z * (z + 0.5) * 2.5;
+
+            grid.getMesh().add(mesh);
+          }
+        }
       });
 
       render();

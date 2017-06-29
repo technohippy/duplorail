@@ -34,7 +34,8 @@ quality = 60; // quality: low/fast (e.g. 10) for design, high/slow (e.g. 50) for
 // if some pieces are missing: "Edit"->"Preferences"->"Advanced"->"Turn off rendering at: " [1000000] "elements"
 
 //duplo(2,2,1,true,false);
-translate([0,0,9.6]) duplo(2,2,2,true,false);
+//translate([0,0,9.6]) duplo(2,2,2,true,false);
+//translate([0,0,9.6/4]) duplo(5,5,0.5,true,false);
 
 
 
