@@ -7,6 +7,7 @@
     </style>
   </head>
   <body>
+    <script src="js/cannon.js"></script>
     <script src="js/three.js"></script>
     <script src="js/OrbitControls.js"></script>
     <script src="js/STLLoader.js"></script>
@@ -17,7 +18,7 @@
         //block: {x:3.2, y:2, z:3.2},
         //sphere: {r:1.4}
         //block: {x:31.7, y:42.75/2, z:31.7},
-        block: {x:30, y:38/2, z:30},
+        block: {x:31.5, y:38/2, z:31.5},
         sphere: {r:14}
       };
 
@@ -99,6 +100,32 @@
         controls.rotateSpeed = 1.0;
       }
 
+      function mouseMove(x, y) {
+        let mouseDown = new MouseEvent("mousedown", {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          shiftKey: true
+        });
+        let mouseMove = new MouseEvent("mousemove", {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          shiftKey: true,
+          clientX: x, 
+          clientY: y
+        });
+        let mouseUp = new MouseEvent("mouseup", {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          shiftKey: true
+        });
+        controls.domElement.dispatchEvent(mouseDown);
+        controls.domElement.dispatchEvent(mouseMove);
+        controls.domElement.dispatchEvent(mouseUp);
+      }
+
       document.addEventListener('keyup', (event) =>{
         if (event.key === ' ') {
           if (cursor.started) {
@@ -113,16 +140,36 @@
           freeControls(controls);
         }
         else if (event.key === 'ArrowUp') {
-          cursor.moveBack();
+          if (event.shiftKey) {
+            mouseMove(0, 10);
+          }
+          else {
+            cursor.moveBack();
+          }
         }
         else if (event.key === 'ArrowDown') {
-          cursor.moveFront();
+          if (event.shiftKey) {
+            mouseMove(0, -10);
+          }
+          else {
+            cursor.moveFront();
+          }
         }
         else if (event.key === 'ArrowLeft') {
-          cursor.moveLeft();
+          if (event.shiftKey) {
+            mouseMove(10, 0);
+          }
+          else {
+            cursor.moveLeft();
+          }
         }
         else if (event.key === 'ArrowRight') {
-          cursor.moveRight();
+          if (event.shiftKey) {
+            mouseMove(-10, 0);
+          }
+          else {
+            cursor.moveRight();
+          }
         }
         else if (event.key === 'a') {
           cursor.moveTop();
@@ -141,6 +188,44 @@
           grid.showLayers(parseInt(event.key, 10));
         }
       });
+
+/*
+      var controllers = {};
+      function gamepadHandler(event, connecting) {
+        var gamepad = event.gamepad;
+        console.log(gamepad);
+        if (connecting) {
+          controllers[gamepad.index] = gamepad;
+        }
+        else {
+          delete controllers[gamepad.index];
+        }
+      }
+      window.addEventListener("gamepadconnected", function(e) {
+        gamepadHandler(e, true);
+      });
+      window.addEventListener("gamepaddisconnected", function(e) {
+        gamepadHandler(e, false);
+      });
+      function scanGamepad() {
+        var gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads() : []);
+        for (var i = 0; i < gamepads.length; i++) {
+          if (gamepads[i]) {
+            controllers[gamepads[i].index] = gamepads[i];
+          }
+        }
+      }
+      function checkGamepad() {
+        scanGamepad();
+        for (i in controllers) {
+          var gamepad = controllers[i];
+          var buttonVals = gamepad.buttons.map((o) => o.pressed);
+          //console.log(buttonVals);
+        }
+        window.requestAnimationFrame(checkGamepad);
+      }
+      checkGamepad();
+*/
     </script>
   </body>
 </html>

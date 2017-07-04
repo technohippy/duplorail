@@ -16,39 +16,6 @@ let models = {
   "verticalCurveEnd_hole_low.stl":null,
   "duplo-2x2x2_low.stl":null,
   "duplo-5x5x0.5_low.stl":null
-
-  /*
-  "corner.stl":null,
-  "cornerHole.stl":null,
-  "end.stl":null,
-  "ramp.stl":null,
-  "rampHole.stl":null,
-  "rampCorner1.stl":null,
-  "rampCorner2.stl":null,
-  "rampCornerHole1.stl":null,
-  "rampCornerHole2.stl":null,
-  "straight.stl":null,
-  "straightHole.stl":null,
-  "verticalCurveStart.stl":null,
-  "verticalCurveHoleStart.stl":null,
-  "verticalCurveHoleEnd.stl":null,
-  "verticalHole.stl":null,
-  "verticalHole1.stl":null,
-  "duplo-2x2x2.stl":null
-  */
-  //"ramp2_low.stl":null,
-  //"ramp2.stl":null,
-  //"longRamp.stl":null,
-  //"crossing.stl":null,
-  //"cosinusSlope.stl":null,
-  //"verticalCurveHole.stl":null,
-  //"duplo-2x1x4.stl":null,
-  //"duplo-2x2x2.stl":null,
-  //"duplo-2x2x4.stl":null,
-  //"duplo-2x4x1.stl":null,
-  //"duplo-2x4x2.stl":null,
-  //"duplo-8x8-place.stl":null,
-  //"duplo-8x8-plate.stl":null
 };
 
 let toHole = {
@@ -61,19 +28,6 @@ let toHole = {
   "verticalCurveStart_low.stl":"verticalCurveStart_hole_low.stl",
   "verticalCurveStart_hole_low.stl":null,
   "verticalCurveEnd_low.stl":null,
-
-  "corner.stl":"cornerHole.stl",
-  "ramp.stl":"rampHole.stl",
-  "rampCorner1.stl":"rampCornerHole1.stl",
-  "rampCorner2.stl":"rampCornerHole2.stl",
-  "straight.stl":"straightHole.stl",
-  //"end.stl":"endHole.stl",
-  "end.stl":"straightHole.stl",
-  "verticalCurveStart.stl":"verticalCurveHoleStart.stl",
-  "verticalCurveHoleEnd.stl":null,
-  "verticalHole.stl":null,
-  "verticalHole1.stl":null,
-  "duplo-2x2x2.stl":null
 }
 
 function getModel(name) {
@@ -115,13 +69,15 @@ class Cursor {
 
   getMesh() {
     if (!this.mesh) {
-      let geometry = new THREE.BoxGeometry(this.settings.block.x, 0.1, this.settings.block.z);
+      let geometry = new THREE.PlaneGeometry(this.settings.block.x, this.settings.block.z);
       let material = new THREE.MeshPhongMaterial({
         color: 0x00ff00,
         depthTest:false,
+        opacity:0.5,
         transparent:true
       });
       this.mesh = new THREE.Mesh(geometry, material);
+      this.mesh.rotation.x = -Math.PI / 2;
       this.mesh.userData['cursor'] = this;
     }
     this.updatePosition()
@@ -577,8 +533,60 @@ class Grid {
 }
 
 class Block {
+  static prepareConstants() {
+    Block.MODELS = {
+      "corner_low.stl":null,
+      "corner_hole_low.stl":null,
+      "straight_low.stl":null,
+      "straight_hole_low.stl":null,
+      "ramp_low.stl":null,
+      "ramp_hole_low.stl":null,
+      "rampCorner1_low.stl":null,
+      "rampCorner2_low.stl":null,
+      "rampCorner1_hole_low.stl":null,
+      "rampCorner2_hole_low.stl":null,
+      "end_low.stl":null,
+      "verticalHole_low.stl":null,
+      "verticalCurveStart_low.stl":null,
+      "verticalCurveStart_hole_low.stl":null,
+      "verticalCurveEnd_hole_low.stl":null,
+      "duplo-2x2x2_low.stl":null,
+      "duplo-5x5x0.5_low.stl":null
+    };
+    Block.TO_HOLE = {
+      "corner_low.stl":"corner_hole_low.stl",
+      "straight_low.stl":"straight_hole_low.stl",
+      "ramp_low.stl":"ramp_hole_low.stl",
+      "rampCorner1_low.stl":"rampCorner1_hole_low.stl",
+      "rampCorner2_low.stl":"rampCorner2_hole_low.stl",
+      "end_low.stl":"straight_hole_low.stl",
+      "verticalCurveStart_low.stl":"verticalCurveStart_hole_low.stl",
+      "verticalCurveStart_hole_low.stl":null,
+      "verticalCurveEnd_low.stl":null,
+    }
+  }
+
+  static getModelNames() {
+    return Object.keys(Block.MODELS);
+  }
+
+  static getModel(type) {
+    return Block.MODELS[type];
+  }
+
+  static getGroundMesh() {
+    let geom = Block.getModel('duplo-5x5x0.5_low.stl');
+    let material = new THREE.MeshPhongMaterial({color:0xcccccc});
+    let mesh = new THREE.Mesh(geom, material);
+    mesh.rotation.x = -Math.PI / 2;
+    return mesh;
+  }
+
   static loadModels(callback) {
-    var modelNames = Object.keys(models);
+    Block.prepareConstants();
+
+    //var modelNames = Object.keys(models);
+    var modelNames = Block.getModelNames();
     let loader = new THREE.STLLoader();
     function loadModel() {
       let modelName = modelNames.pop();
