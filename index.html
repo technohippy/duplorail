@@ -54,9 +54,27 @@
         SETTINGS.block.z * SETTINGS.world.z * scale
       );
 
+      let ball = new THREE.Mesh(
+        new THREE.SphereGeometry(10, 32, 32),
+        new THREE.MeshPhongMaterial({color:0xffff00})
+      );
+      grid.getMesh().add(ball);
+      let ballBody;
+      let world = new CANNON.World();
+      world.gravity.set(0, -9.82, 0);
+      world.broadphase = new CANNON.NaiveBroadphase();
+      let groundShape = new CANNON.Plane();
+      let groundBody = new CANNON.Body({mass:0, shape:groundShape});
+      groundBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_X, -Math.PI/2);
+      world.add(groundBody);
+      let isSimulating = false;
       let render = function () {
         requestAnimationFrame( render );
         renderer.render(scene, camera);
+        if (isSimulating) {
+          world.step(2.0 / 60.0);
+          ball.position.copy(ballBody.position);
+        }
       };
 
       const controls = new THREE.OrbitControls( camera, renderer.domElement );
@@ -72,7 +90,7 @@
         grid.getMesh().material.visible = true;
         for (let x = 0; x < 4; x++) {
           for (let z = 0; z < 4; z++) {
-            let mesh = getGroundMesh();
+            let mesh = Block.getGroundMesh();
             mesh.position.x = grid.settings.block.x * (x + 0.5) * 2.5;
             mesh.position.y = -grid.settings.block.y * 0.2;
             mesh.position.z = grid.settings.block.z * (z + 0.5) * 2.5;
@@ -138,6 +156,9 @@
         else if (event.key === 'Enter') {
           cursor.complete();
           freeControls(controls);
+          cursor.setupBody(world);
+          ballBody = cursor.simulateBall(world);
+          isSimulating = true;
         }
         else if (event.key === 'ArrowUp') {
           if (event.shiftKey) {

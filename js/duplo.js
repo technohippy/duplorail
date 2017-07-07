@@ -1,47 +1,3 @@
-let models = {
-  "corner_low.stl":null,
-  "corner_hole_low.stl":null,
-  "straight_low.stl":null,
-  "straight_hole_low.stl":null,
-  "ramp_low.stl":null,
-  "ramp_hole_low.stl":null,
-  "rampCorner1_low.stl":null,
-  "rampCorner2_low.stl":null,
-  "rampCorner1_hole_low.stl":null,
-  "rampCorner2_hole_low.stl":null,
-  "end_low.stl":null,
-  "verticalHole_low.stl":null,
-  "verticalCurveStart_low.stl":null,
-  "verticalCurveStart_hole_low.stl":null,
-  "verticalCurveEnd_hole_low.stl":null,
-  "duplo-2x2x2_low.stl":null,
-  "duplo-5x5x0.5_low.stl":null
-};
-
-let toHole = {
-  "corner_low.stl":"corner_hole_low.stl",
-  "straight_low.stl":"straight_hole_low.stl",
-  "ramp_low.stl":"ramp_hole_low.stl",
-  "rampCorner1_low.stl":"rampCorner1_hole_low.stl",
-  "rampCorner2_low.stl":"rampCorner2_hole_low.stl",
-  "end_low.stl":"straight_hole_low.stl",
-  "verticalCurveStart_low.stl":"verticalCurveStart_hole_low.stl",
-  "verticalCurveStart_hole_low.stl":null,
-  "verticalCurveEnd_low.stl":null,
-}
-
-function getModel(name) {
-  return models[name];
-}
-
-function getGroundMesh() {
-  let geom = getModel('duplo-5x5x0.5_low.stl');
-  let material = new THREE.MeshPhongMaterial({color:0xcccccc});
-  let mesh = new THREE.Mesh(geom, material);
-  mesh.rotation.x = -Math.PI / 2;
-  return mesh;
-}
-
 const BOTTOM = new THREE.Vector3(0, -1, 0);
 const TOP = new THREE.Vector3(0, 1, 0);
 const LEFT = new THREE.Vector3(-1, 0, 0);
@@ -299,6 +255,42 @@ class Cursor {
     var lastBlock = this.getTrack().peek();
     this.setPosition(lastBlock.position);
   }
+
+  setupBody(world) {
+    this.grid.forEach((block) => {
+      block.setupBody(world);
+    });
+    this.tracks.forEach((track) => {
+      let firstBlock = track.peek();
+      // TODO: put moving ball
+    });
+  }
+
+  simulateBall(world) {
+    //this.tracks.forEach((track) => {
+      let track = this.tracks[this.tracks.length - 1];
+      let firstBlock = track.peek(track.length - 1);
+      let firstMesh = firstBlock.getMesh();
+      let sphereBody = new CANNON.Body({
+        mass:1,
+        shape:new CANNON.Sphere(10),
+        position:new CANNON.Vec3(
+          firstMesh.position.x,
+          firstMesh.position.y + 20,
+          firstMesh.position.z,
+        )
+      });
+      world.add(sphereBody);
+
+      const impact = 20;
+      sphereBody.applyImpulse(
+        firstBlock.toSide.multiplyScalar(impact),
+        sphereBody.position
+      );
+      return sphereBody;
+    //});
+  }
+
 }
 
 class Board {
@@ -450,13 +442,15 @@ class Grid {
     this.cells[position.x][position.y][position.z] = block;
   }
 
-  forEach(handler) {
+  forEach(handler, withNull=false) {
     for (let x = 0; x < this.settings.world.x; x++) {
       for (let y = 0; y < this.settings.world.y; y++) {
         for (let z = 0; z < this.settings.world.z; z++) {
           let position = new THREE.Vector3(x, y, z);
           let block = this.get(position);
-          handler(block, position);
+          if (block || withNull) {
+            handler(block, position);
+          }
         }
       }
     }
@@ -491,6 +485,7 @@ class Grid {
       if (block && block.mesh) {
         if (layer < 0 || position.y < layer) {
           block.mesh.material.opacity = 1.0;
+block.mesh.material.opacity = 0.3;  // TODO
           block.mesh.material.visible = true;
         }
         else {
@@ -501,7 +496,6 @@ class Grid {
   }
 
   hilightLayers(layer) {
-    console.log(layer);
     this.forEach((block, position) => {
       if (block && block.mesh) {
         block.mesh.material.visible = true;
@@ -570,8 +564,16 @@ class Block {
     return Object.keys(Block.MODELS);
   }
 
+  static hasModel(type) {
+    return Block.getModel(type) !== null;
+  }
+
   static getModel(type) {
     return Block.MODELS[type];
+  }
+
+  static setModel(type, geometry) {
+    Block.MODELS[type] = geometry;
   }
 
   static getGroundMesh() {
@@ -585,14 +587,13 @@ class Block {
   static loadModels(callback) {
     Block.prepareConstants();
 
-    //var modelNames = Object.keys(models);
     var modelNames = Block.getModelNames();
     let loader = new THREE.STLLoader();
     function loadModel() {
       let modelName = modelNames.pop();
       if (modelName) {
         loader.load(`models/${modelName}`, (geometry) => {
-          models[modelName] = geometry;
+          Block.setModel(modelName, geometry);
           loadModel();
         });
       }
@@ -600,9 +601,10 @@ class Block {
     loadModel();
 
     function checkModelLoad() {
-      for (let modelName in models) {
+      let modelNames = Block.getModelNames();
+      for (let modelName of modelNames) {
         if (modelName) {
-          if (models[modelName] === null) {
+          if (!Block.hasModel(modelName)) {
             setTimeout(checkModelLoad, 100);
             return;
           }
@@ -642,11 +644,17 @@ class Block {
   }
 
   getGeometry() {
-    return models[this.type];
+    return Block.getModel(this.type);
   }
 
-  getMesh(grid) {
-    let hasCeil = this.hasCeil(grid);
+  getMesh(grid=null) {
+    let hasCeil = false;
+    if (!grid) {
+      if (this.mesh) return this.mesh;
+    }
+    else {
+      hasCeil = this.hasCeil(grid);
+    }
     if (!this.mesh) {
       let rotateZ = 0;
       if (this.fromSide === null && this.toSide === null) {
@@ -779,7 +787,7 @@ class Block {
   convertToHole() {
     if (!this.mesh) throw 'invalid mesh';
 
-    let holeType = toHole[this.type];
+    let holeType = Block.TO_HOLE[this.type];
     if (holeType) {
       let oldGeometry = this.mesh.geometry;
       this._setType(holeType);
@@ -812,6 +820,103 @@ class Block {
     }
     this.nextBlock = null;
     this.toSide = null;
+  }
+
+  setupBody(world) {
+    if (!this.mesh) return;
+
+    let w = this.settings.block.x;
+    let h = this.settings.block.y;
+    let d = this.settings.block.z;
+
+    let boxBody = new CANNON.Body({
+      mass:0,
+      position:new CANNON.Vec3(
+        this.mesh.position.x,
+        this.mesh.position.y,
+        this.mesh.position.z
+      )
+    });
+
+    switch(this.type) {
+      case "duplo-2x2x2_low.stl":
+        break;
+
+      case "corner_low.stl":
+        break;
+      case "straight_low.stl":
+        let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+        let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+        let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+        boxBody.addShape(groundShape);
+        boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
+        boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
+
+        boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, -Math.PI/2);
+        let p = this.mesh.position.clone().applyAxisAngle(
+          new THREE.Vector3(0, 1, 0), Math.PI/2);
+        boxBody.position = new CANNON.Vec3(p.x, p.y, p.z);
+        break;
+      case "end_low.stl":
+        break;
+      case "verticalHole_low.stl":
+        break;
+      case "verticalCurveStart_low.stl":
+        break;
+
+      case "corner_hole_low.stl":
+        break;
+      case "straight_hole_low.stl":
+        break;
+      case "verticalCurveStart_hole_low.stl":
+        break;
+      case "verticalCurveEnd_hole_low.stl":
+        break;
+      case "ramp_low.stl":
+        break;
+      case "rampCorner1_low.stl":
+        break;
+      case "rampCorner2_low.stl":
+        break;
+
+      case "ramp_hole_low.stl":
+        break;
+      case "rampCorner1_hole_low.stl":
+        break;
+      case "rampCorner2_hole_low.stl":
+        break;
+    }
+
+    if (boxBody.shapes.length === 0) {
+      let boxShape = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/2));
+      boxBody.addShape(boxShape);
+    }
+    world.add(boxBody);
+
+    this.addBodyMesh(boxBody, this.mesh.parent);
+  }
+
+  addBodyMesh(boxBody, parent) {
+    let mesh = new THREE.Group();
+    boxBody.shapes.forEach((shape, i) => {
+      let boxGeo = new THREE.BoxGeometry(
+        shape.halfExtents.x * 2,
+        shape.halfExtents.y * 2,
+        shape.halfExtents.z * 2
+      );
+      let boxMesh = new THREE.Mesh(boxGeo, new THREE.MeshPhongMaterial({color:0x666666}));
+      let offset = boxBody.shapeOffsets[i];
+      boxMesh.position.set(
+        boxBody.position.x + offset.x,
+        boxBody.position.y + offset.y + shape.halfExtents.y,
+        boxBody.position.z + offset.z
+      );
+      mesh.add(boxMesh);
+    });
+    if (boxBody.quaternion) {
+      mesh.quaternion.copy(boxBody.quaternion);
+    }
+    parent.add(mesh);
   }
 }
 
