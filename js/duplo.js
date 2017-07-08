@@ -1,3 +1,4 @@
+const DEBUG = false;
 const BOTTOM = new THREE.Vector3(0, -1, 0);
 const TOP = new THREE.Vector3(0, 1, 0);
 const LEFT = new THREE.Vector3(-1, 0, 0);
@@ -271,18 +272,20 @@ class Cursor {
       let track = this.tracks[this.tracks.length - 1];
       let firstBlock = track.peek(track.length - 1);
       let firstMesh = firstBlock.getMesh();
+      let baseThickness = this.settings.block.y / 8;
       let sphereBody = new CANNON.Body({
-        mass:1,
-        shape:new CANNON.Sphere(10),
+        mass:10.0,
+        shape:new CANNON.Sphere(8),
+        linearDamping:0,
         position:new CANNON.Vec3(
           firstMesh.position.x,
-          firstMesh.position.y + 20,
-          firstMesh.position.z,
+          firstMesh.position.y + this.settings.block.y / 2 + baseThickness + 8 + 1,
+          firstMesh.position.z
         )
       });
       world.add(sphereBody);
 
-      const impact = 20;
+      const impact = 500;
       sphereBody.applyImpulse(
         firstBlock.toSide.multiplyScalar(impact),
         sphereBody.position
@@ -485,7 +488,7 @@ class Grid {
       if (block && block.mesh) {
         if (layer < 0 || position.y < layer) {
           block.mesh.material.opacity = 1.0;
-block.mesh.material.opacity = 0.3;  // TODO
+          if (DEBUG) block.mesh.material.opacity = 0.0;
           block.mesh.material.visible = true;
         }
         else {
@@ -833,27 +836,26 @@ class Block {
       mass:0,
       position:new CANNON.Vec3(
         this.mesh.position.x,
-        this.mesh.position.y,
+        this.mesh.position.y + h / 2,
         this.mesh.position.z
       )
     });
+    boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, this.rotateZ);
 
     if (this.type === "duplo-2x2x2_low.stl") {
     }
 
     else if (this.type === "corner_low.stl" || this.type === "corner_hole_low.stl") {
       let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
-      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
-      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
-      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/10));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h, d/10));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
       boxBody.addShape(groundShape);
-      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
-      boxBody.addShape(wallShape2, new CANNON.Vec3(0, 0, -d*4/10));
-      boxBody.addShape(wallShape3, new CANNON.Vec3(w/8, 0, -d/8), new CANNON.Quaternion().setFromAxisAngle(CANNON.Vec3.UNIT_Y, Math.PI/4));
-      //boxBody.addShape(wallShape3);
-      this.rotateZ = 0;
-      boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, this.rotateZ);
-      boxBody.position = new CANNON.Vec3(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, h/2, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(0, h/2, -d*4/10));
+      let q = new CANNON.Quaternion();
+      q.setFromAxisAngle(CANNON.Vec3.UNIT_Y, Math.PI/4);
+      boxBody.addShape(wallShape3, new CANNON.Vec3(w/5, h/2, -d/5), q);
     }
     else if (this.type === "straight_low.stl" || this.type === "straight_hole_low.stl") {
       let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
@@ -862,42 +864,94 @@ class Block {
       boxBody.addShape(groundShape);
       boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
       boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
-      boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, this.rotateZ);
-      boxBody.position = new CANNON.Vec3(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z);
     }
     else if (this.type === "end_low.stl") {
       let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
       let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
       let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
       let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
-      boxBody.addShape(groundShape);
+      let groundQuaternion = new CANNON.Quaternion();
+      groundQuaternion.setFromAxisAngle(CANNON.Vec3.UNIT_X, Math.PI/20);
+      boxBody.addShape(groundShape, new CANNON.Vec3(0, -h/8, 0), groundQuaternion);
       boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
       boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
       boxBody.addShape(wallShape3, new CANNON.Vec3(0, 0, d*4/10));
-      boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, this.rotateZ);
-      boxBody.position = new CANNON.Vec3(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z);
+    }
+    else if (this.type === "verticalCurveStart_low.stl" || this.type === "verticalCurveStart_hole_low.stl") {
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
+      let quaternion = new CANNON.Quaternion();
+      quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI/6);
+      boxBody.addShape(groundShape, new CANNON.Vec3(0, h, 0), quaternion);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
+      boxBody.addShape(wallShape3, new CANNON.Vec3(0, 0, -d*4/10));
     }
     else if (this.type === "verticalHole_low.stl") {
-    }
-    else if (this.type === "verticalCurveStart_low.stl") {
-    }
-
-    else if (this.type === "verticalCurveStart_hole_low.stl") {
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
+      let wallShape4 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
+      boxBody.addShape(wallShape3, new CANNON.Vec3(0, 0, d*4/10));
+      boxBody.addShape(wallShape4, new CANNON.Vec3(0, 0, -d*4/10));
     }
     else if (this.type === "verticalCurveEnd_hole_low.stl") {
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
+      let quaternion = new CANNON.Quaternion();
+      quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI/6);
+      boxBody.addShape(groundShape, new CANNON.Vec3(0, h/2, 0), quaternion);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
+      boxBody.addShape(wallShape3, new CANNON.Vec3(0, 0, -d*4/10));
     }
-    else if (this.type === "ramp_low.stl") {
+    else if (this.type === "ramp_low.stl" || this.type === "ramp_hole_low.stl") {
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/1.8));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h*1.5, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h*1.5, d/2));
+      let quaternion = new CANNON.Quaternion();
+      quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI/6);
+      boxBody.addShape(groundShape, new CANNON.Vec3(0, h/2, 0), quaternion);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
     }
-    else if (this.type === "rampCorner1_low.stl") {
+    else if (this.type === "rampCorner1_low.stl" || this.type === "rampCorner1_hole_low.stl") {
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h, d/10));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
+      let groundQuaternion = new CANNON.Quaternion();
+      let axis = new CANNON.Vec3(1, 0, 1);
+      axis.normalize();
+      groundQuaternion.setFromAxisAngle(axis, Math.PI/4);
+      boxBody.addShape(groundShape, new CANNON.Vec3(0, h/2, 0), groundQuaternion);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, h/2, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(0, h/2, -d*4/10));
+      let wallQuaternion = new CANNON.Quaternion();
+      wallQuaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, Math.PI/4);
+      boxBody.addShape(wallShape3, new CANNON.Vec3(w/5, h/2, -d/5), wallQuaternion);
     }
-    else if (this.type === "rampCorner2_low.stl") {
-    }
-
-    else if (this.type === "ramp_hole_low.stl") {
-    }
-    else if (this.type === "rampCorner1_hole_low.stl") {
-    }
-    else if (this.type === "rampCorner2_hole_low.stl") {
+    else if (this.type === "rampCorner2_low.stl" || this.type === "rampCorner2_hole_low.stl") {
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h, d/10));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
+      let groundQuaternion = new CANNON.Quaternion();
+      let axis = new CANNON.Vec3(1, 0, 1);
+      axis.normalize();
+      groundQuaternion.setFromAxisAngle(axis, -Math.PI/4);
+      boxBody.addShape(groundShape, new CANNON.Vec3(0, h/2, 0), groundQuaternion);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, h/2, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(0, h/2, d*4/10));
+      let wallQuaternion = new CANNON.Quaternion();
+      wallQuaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, -Math.PI/4);
+      boxBody.addShape(wallShape3, new CANNON.Vec3(w/5, h/2, d/5), wallQuaternion);
     }
 
     if (boxBody.shapes.length === 0) {
@@ -906,7 +960,7 @@ class Block {
     }
     world.add(boxBody);
 
-    this.addBodyMesh(boxBody, this.mesh.parent);
+    if (DEBUG) this.addBodyMesh(boxBody, this.mesh.parent);
   }
 
   addBodyMesh(boxBody, parent) {
@@ -918,12 +972,8 @@ class Block {
         shape.halfExtents.z * 2
       );
       let boxMesh = new THREE.Mesh(boxGeo, new THREE.MeshPhongMaterial({color:0x666666}));
-      let offset = boxBody.shapeOffsets[i];
-      boxMesh.position.set(
-        offset.x,
-        offset.y + shape.halfExtents.y,
-        offset.z
-      );
+      boxMesh.position.copy(boxBody.shapeOffsets[i]);
+      boxMesh.quaternion.copy(boxBody.shapeOrientations[i]);
       mesh.add(boxMesh);
     });
     mesh.position.copy(boxBody.position);
