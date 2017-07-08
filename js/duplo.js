@@ -274,7 +274,7 @@ class Cursor {
       let firstMesh = firstBlock.getMesh();
       let baseThickness = this.settings.block.y / 8;
       let sphereBody = new CANNON.Body({
-        mass:10.0,
+        mass:100.0,
         shape:new CANNON.Sphere(8),
         linearDamping:0,
         position:new CANNON.Vec3(
@@ -285,7 +285,7 @@ class Cursor {
       });
       world.add(sphereBody);
 
-      const impact = 500;
+      const impact = 2000;
       sphereBody.applyImpulse(
         firstBlock.toSide.multiplyScalar(impact),
         sphereBody.position
@@ -900,26 +900,26 @@ class Block {
       boxBody.addShape(wallShape4, new CANNON.Vec3(0, 0, -d*4/10));
     }
     else if (this.type === "verticalCurveEnd_hole_low.stl") {
-      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/1.5));
       let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
       let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
       let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
       let quaternion = new CANNON.Quaternion();
       quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI/6);
-      boxBody.addShape(groundShape, new CANNON.Vec3(0, h/2, 0), quaternion);
+      boxBody.addShape(groundShape, new CANNON.Vec3(0, h*3/5, 0), quaternion);
       boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
       boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
       boxBody.addShape(wallShape3, new CANNON.Vec3(0, 0, -d*4/10));
     }
     else if (this.type === "ramp_low.stl" || this.type === "ramp_hole_low.stl") {
       let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/1.8));
-      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h*1.5, d/2));
-      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h*1.5, d/2));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/2));
       let quaternion = new CANNON.Quaternion();
       quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI/6);
       boxBody.addShape(groundShape, new CANNON.Vec3(0, h/2, 0), quaternion);
-      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
-      boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, h/2, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, h/2, 0));
     }
     else if (this.type === "rampCorner1_low.stl" || this.type === "rampCorner1_hole_low.stl") {
       let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
