@@ -72,7 +72,7 @@
         requestAnimationFrame( render );
         renderer.render(scene, camera);
         if (isSimulating) {
-          world.step(2.0 / 60.0);
+          world.step(2 / 60.0);
           ball.position.copy(ballBody.position);
         }
       };
@@ -81,7 +81,7 @@
       controls.addEventListener( 'change', render ); // remove when using animation loop
       controls.enableZoom = false;
       controls.enableKeys = false;
-      restrictControls(controls);
+      //restrictControls(controls);
 
       cursor.getMesh().material.visible = false;
       grid.getMesh().material.visible = false;

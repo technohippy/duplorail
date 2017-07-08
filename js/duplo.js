@@ -624,6 +624,7 @@ class Block {
     this.toSide = null;
     this.prevBlock = null;
     this.nextBlock = null;
+    this.rotateZ = 0;
   }
 
   isHole() {
@@ -656,16 +657,15 @@ class Block {
       hasCeil = this.hasCeil(grid);
     }
     if (!this.mesh) {
-      let rotateZ = 0;
       if (this.fromSide === null && this.toSide === null) {
         this._setType('duplo-2x2x2_low.stl');
       }
       else if (this.fromSide === null || this.toSide === null) {
         this._setType('end_low.stl');
         let openSide = this.fromSide || this.toSide;
-        if      (openSide.equals(FRONT)) rotateZ =  Math.PI;
-        else if (openSide.equals(LEFT))  rotateZ =  Math.PI / 2;
-        else if (openSide.equals(RIGHT)) rotateZ = -Math.PI / 2;
+        if      (openSide.equals(FRONT)) this.rotateZ =  Math.PI;
+        else if (openSide.equals(LEFT))  this.rotateZ =  Math.PI / 2;
+        else if (openSide.equals(RIGHT)) this.rotateZ = -Math.PI / 2;
       }
       else if (this.isOpenSides(LEFT, RIGHT)) {
         if (hasCeil) {
@@ -674,7 +674,7 @@ class Block {
         else {
           this._setType('straight_low.stl');
         }
-        rotateZ = Math.PI / 2;
+        this.rotateZ = Math.PI / 2;
       }
       else if (this.isOpenSides(FRONT, BACK)) {
         if (hasCeil) {
@@ -691,9 +691,9 @@ class Block {
         else {
           this._setType('corner_low.stl');
         }
-        if      (this.isOpenSides(BACK, LEFT))   rotateZ = -Math.PI / 2;
-        else if (this.isOpenSides(BACK, RIGHT))  rotateZ =  Math.PI;
-        else if (this.isOpenSides(FRONT, RIGHT)) rotateZ =  Math.PI / 2;
+        if      (this.isOpenSides(BACK, LEFT))   this.rotateZ = -Math.PI / 2;
+        else if (this.isOpenSides(BACK, RIGHT))  this.rotateZ =  Math.PI;
+        else if (this.isOpenSides(FRONT, RIGHT)) this.rotateZ =  Math.PI / 2;
       }
       else if (!this.fromSide.equals(TOP) && this.toSide.equals(BOTTOM)) {
         if (this.nextBlock && this.nextBlock.toSide && this.nextBlock.toSide.equals(BOTTOM)) {
@@ -703,17 +703,17 @@ class Block {
           else {
             this._setType('verticalCurveStart_low.stl');
           }
-          if      (this.fromSide.equals(BACK))  rotateZ =  Math.PI;
-          else if (this.fromSide.equals(LEFT))  rotateZ = -Math.PI / 2;
-          else if (this.fromSide.equals(RIGHT)) rotateZ =  Math.PI / 2;
+          if      (this.fromSide.equals(BACK))  this.rotateZ =  Math.PI;
+          else if (this.fromSide.equals(LEFT))  this.rotateZ = -Math.PI / 2;
+          else if (this.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI / 2;
         }
       }
       else if (this.fromSide.equals(TOP) && !this.toSide.equals(BOTTOM)) {
         if (this.prevBlock.fromSide.equals(TOP)) {
           this._setType('verticalCurveEnd_hole_low.stl');
-          if      (this.toSide.equals(BACK))  rotateZ =  Math.PI;
-          else if (this.toSide.equals(LEFT))  rotateZ = -Math.PI / 2;
-          else if (this.toSide.equals(RIGHT)) rotateZ =  Math.PI / 2;
+          if      (this.toSide.equals(BACK))  this.rotateZ =  Math.PI;
+          else if (this.toSide.equals(LEFT))  this.rotateZ = -Math.PI / 2;
+          else if (this.toSide.equals(RIGHT)) this.rotateZ =  Math.PI / 2;
         }
         else {
           if ((this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(BACK)) ||
@@ -726,9 +726,9 @@ class Block {
             else {
               this._setType('ramp_low.stl');
             }
-            if      (this.toSide.equals(BACK))  rotateZ =  Math.PI;
-            else if (this.toSide.equals(LEFT))  rotateZ = -Math.PI / 2;
-            else if (this.toSide.equals(RIGHT)) rotateZ =  Math.PI / 2;
+            if      (this.toSide.equals(BACK))  this.rotateZ =  Math.PI;
+            else if (this.toSide.equals(LEFT))  this.rotateZ = -Math.PI / 2;
+            else if (this.toSide.equals(RIGHT)) this.rotateZ =  Math.PI / 2;
           }
           else if ((this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(LEFT)) ||
               (this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(RIGHT)) ||
@@ -740,9 +740,9 @@ class Block {
             else {
               this._setType('rampCorner1_low.stl');
             }
-            if      (this.prevBlock.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
-            else if (this.prevBlock.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
-            else if (this.prevBlock.fromSide.equals(RIGHT)) rotateZ =  Math.PI;
+            if      (this.prevBlock.fromSide.equals(BACK))  this.rotateZ = -Math.PI / 2;
+            else if (this.prevBlock.fromSide.equals(FRONT)) this.rotateZ =  Math.PI / 2;
+            else if (this.prevBlock.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI;
           }
           else if ((this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(RIGHT)) ||
               (this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(LEFT)) ||
@@ -754,9 +754,9 @@ class Block {
             else {
               this._setType('rampCorner2_low.stl');
             }
-            if      (this.prevBlock.fromSide.equals(BACK))  rotateZ = -Math.PI / 2;
-            else if (this.prevBlock.fromSide.equals(FRONT)) rotateZ =  Math.PI / 2;
-            else if (this.prevBlock.fromSide.equals(RIGHT)) rotateZ =  Math.PI;
+            if      (this.prevBlock.fromSide.equals(BACK))  this.rotateZ = -Math.PI / 2;
+            else if (this.prevBlock.fromSide.equals(FRONT)) this.rotateZ =  Math.PI / 2;
+            else if (this.prevBlock.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI;
           }
         }
       }
@@ -773,7 +773,7 @@ class Block {
       let material = new THREE.MeshPhongMaterial({color: color, transparent:true, opacity:1.0});
       this.mesh = new THREE.Mesh(this.getGeometry(), material);
       this.mesh.rotation.x = -Math.PI / 2;
-      this.mesh.rotation.z = rotateZ;
+      this.mesh.rotation.z = this.rotateZ;
       this.mesh.userData['block'] = this;
     }
     this.mesh.position.set(
@@ -838,53 +838,66 @@ class Block {
       )
     });
 
-    switch(this.type) {
-      case "duplo-2x2x2_low.stl":
-        break;
+    if (this.type === "duplo-2x2x2_low.stl") {
+    }
 
-      case "corner_low.stl":
-        break;
-      case "straight_low.stl":
-        let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
-        let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
-        let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
-        boxBody.addShape(groundShape);
-        boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
-        boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
+    else if (this.type === "corner_low.stl" || this.type === "corner_hole_low.stl") {
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/10));
+      boxBody.addShape(groundShape);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(0, 0, -d*4/10));
+      boxBody.addShape(wallShape3, new CANNON.Vec3(w/8, 0, -d/8), new CANNON.Quaternion().setFromAxisAngle(CANNON.Vec3.UNIT_Y, Math.PI/4));
+      //boxBody.addShape(wallShape3);
+      this.rotateZ = 0;
+      boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, this.rotateZ);
+      boxBody.position = new CANNON.Vec3(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z);
+    }
+    else if (this.type === "straight_low.stl" || this.type === "straight_hole_low.stl") {
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      boxBody.addShape(groundShape);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
+      boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, this.rotateZ);
+      boxBody.position = new CANNON.Vec3(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z);
+    }
+    else if (this.type === "end_low.stl") {
+      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/10, h/2, d/2));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/2, h/2, d/10));
+      boxBody.addShape(groundShape);
+      boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, 0, 0));
+      boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, 0, 0));
+      boxBody.addShape(wallShape3, new CANNON.Vec3(0, 0, d*4/10));
+      boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, this.rotateZ);
+      boxBody.position = new CANNON.Vec3(this.mesh.position.x, this.mesh.position.y, this.mesh.position.z);
+    }
+    else if (this.type === "verticalHole_low.stl") {
+    }
+    else if (this.type === "verticalCurveStart_low.stl") {
+    }
 
-        boxBody.quaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, -Math.PI/2);
-        let p = this.mesh.position.clone().applyAxisAngle(
-          new THREE.Vector3(0, 1, 0), Math.PI/2);
-        boxBody.position = new CANNON.Vec3(p.x, p.y, p.z);
-        break;
-      case "end_low.stl":
-        break;
-      case "verticalHole_low.stl":
-        break;
-      case "verticalCurveStart_low.stl":
-        break;
+    else if (this.type === "verticalCurveStart_hole_low.stl") {
+    }
+    else if (this.type === "verticalCurveEnd_hole_low.stl") {
+    }
+    else if (this.type === "ramp_low.stl") {
+    }
+    else if (this.type === "rampCorner1_low.stl") {
+    }
+    else if (this.type === "rampCorner2_low.stl") {
+    }
 
-      case "corner_hole_low.stl":
-        break;
-      case "straight_hole_low.stl":
-        break;
-      case "verticalCurveStart_hole_low.stl":
-        break;
-      case "verticalCurveEnd_hole_low.stl":
-        break;
-      case "ramp_low.stl":
-        break;
-      case "rampCorner1_low.stl":
-        break;
-      case "rampCorner2_low.stl":
-        break;
-
-      case "ramp_hole_low.stl":
-        break;
-      case "rampCorner1_hole_low.stl":
-        break;
-      case "rampCorner2_hole_low.stl":
-        break;
+    else if (this.type === "ramp_hole_low.stl") {
+    }
+    else if (this.type === "rampCorner1_hole_low.stl") {
+    }
+    else if (this.type === "rampCorner2_hole_low.stl") {
     }
 
     if (boxBody.shapes.length === 0) {
@@ -907,15 +920,14 @@ class Block {
       let boxMesh = new THREE.Mesh(boxGeo, new THREE.MeshPhongMaterial({color:0x666666}));
       let offset = boxBody.shapeOffsets[i];
       boxMesh.position.set(
-        boxBody.position.x + offset.x,
-        boxBody.position.y + offset.y + shape.halfExtents.y,
-        boxBody.position.z + offset.z
+        offset.x,
+        offset.y + shape.halfExtents.y,
+        offset.z
       );
       mesh.add(boxMesh);
     });
-    if (boxBody.quaternion) {
-      mesh.quaternion.copy(boxBody.quaternion);
-    }
+    mesh.position.copy(boxBody.position);
+    mesh.quaternion.copy(boxBody.quaternion);
     parent.add(mesh);
   }
 }
