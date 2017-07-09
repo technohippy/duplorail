@@ -12,8 +12,9 @@ class Cursor {
     this.settings = settings;
     this.position = new THREE.Vector3(0, this.settings.world.y - 1, 0);
     this.started = false;
-    this.tracks = [new Track()];
+    this.tracks = [new Track(this.settings)];
     this.mesh = null;
+    this.completed = false;
   }
 
   getTrack() {
@@ -22,6 +23,12 @@ class Cursor {
 
   get track() {
     return this.getTrack();
+  }
+
+  eachTrack(handler) {
+    this.tracks.forEach((track) => {
+      if (track.length !== 0) handler(track);
+    });
   }
 
   getMesh() {
@@ -103,7 +110,7 @@ class Cursor {
       this.grid.getMesh().add(mesh);
     }
 
-    this.tracks.unshift(new Track());
+    this.tracks.unshift(new Track(this.settings));
   }
 
   complete() {
@@ -142,11 +149,12 @@ class Cursor {
     this.grid.getMesh().material.visible = false;
     this.getMesh().material.visible = false;
     this.grid.showAllLayers();
+    this.completed = true;
   }
 
   reset() {
     this.grid.reset();
-    this.tracks = [new Track()];
+    this.tracks = [new Track(this.settings)];
     this.started = false;
     this.setPosition({x:0, y:this.settings.world.y - 1, z:0});
     this.mesh.material.visible = true;
@@ -266,34 +274,6 @@ class Cursor {
       // TODO: put moving ball
     });
   }
-
-  simulateBall(world) {
-    //this.tracks.forEach((track) => {
-      let track = this.tracks[this.tracks.length - 1];
-      let firstBlock = track.peek(track.length - 1);
-      let firstMesh = firstBlock.getMesh();
-      let baseThickness = this.settings.block.y / 8;
-      let sphereBody = new CANNON.Body({
-        mass:100.0,
-        shape:new CANNON.Sphere(8),
-        linearDamping:0,
-        position:new CANNON.Vec3(
-          firstMesh.position.x,
-          firstMesh.position.y + this.settings.block.y / 2 + baseThickness + 8 + 1,
-          firstMesh.position.z
-        )
-      });
-      world.add(sphereBody);
-
-      const impact = 2000;
-      sphereBody.applyImpulse(
-        firstBlock.toSide.multiplyScalar(impact),
-        sphereBody.position
-      );
-      return sphereBody;
-    //});
-  }
-
 }
 
 class Board {
@@ -983,8 +963,11 @@ class Block {
 }
 
 class Track {
-  constructor(x, y, z) {
+  constructor(settings) {
+    this.settings = settings;
     this.track = [];
+    this.mesh = null;
+    this.ballBody = null;
   }
 
   add(block) {
@@ -1013,5 +996,57 @@ class Track {
 
   get length() {
     return this.track.length;
+  }
+
+  getMesh() {
+    if (!this.mesh) {
+      this.mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(10, 32, 32),
+        new THREE.MeshPhongMaterial({color:0xffffff})
+      );
+    }
+    return this.mesh;
+  }
+
+  simulateBall(world) {
+    if (this.length === 0) return;
+
+    let firstBlock = this.peek(this.length - 1);
+    let firstMesh = firstBlock.getMesh();
+    let baseThickness = this.settings.block.y / 8;
+    if (this.ballBody) {
+      this.ballBody.position.set(
+        firstMesh.position.x,
+        firstMesh.position.y + this.settings.block.y / 2 + baseThickness + 8 + 1,
+        firstMesh.position.z
+      );
+      this.ballBody.velocity.setZero();
+      this.ballBody.quaternion.set(0, 0, 0, 0);
+      this.ballBody.angularVelocity.setZero();
+    }
+    else {
+      this.ballBody = new CANNON.Body({
+        mass:100.0,
+        shape:new CANNON.Sphere(8),
+        linearDamping:0,
+        position:new CANNON.Vec3(
+          firstMesh.position.x,
+          firstMesh.position.y + this.settings.block.y / 2 + baseThickness + 8 + 1,
+          firstMesh.position.z
+        )
+      });
+      world.add(this.ballBody);
+    }
+
+    const impact = 2000;
+    this.ballBody.applyImpulse(
+      firstBlock.toSide.clone().multiplyScalar(impact),
+      this.ballBody.position
+    );
+  }
+
+  step() {
+    if (!this.ballBody || !this.mesh) return;
+    this.mesh.position.copy(this.ballBody.position);
   }
 }

@@ -54,11 +54,13 @@
         SETTINGS.block.z * SETTINGS.world.z * scale
       );
 
+      /*
       let ball = new THREE.Mesh(
         new THREE.SphereGeometry(10, 32, 32),
         new THREE.MeshPhongMaterial({color:0xffffff, visible:false})
       );
       grid.getMesh().add(ball);
+      */
       let ballBody;
       let world = new CANNON.World();
       world.defaultContactMaterial.friction = 0.0;
@@ -77,6 +79,7 @@
       world.add(groundBody);
       */
 
+      // base board
       let sphereInterval = SETTINGS.block.x * 10 / 40;
       for (let x = 0; x < 20; x++) {
         for (let z = 0; z < 20; z++) {
@@ -103,8 +106,10 @@
         requestAnimationFrame( render );
         renderer.render(scene, camera);
         if (isSimulating) {
-          world.step(2 / 60.0);
-          ball.position.copy(ballBody.position);
+          world.step(1 / 60.0);
+          cursor.eachTrack((track) => {
+            track.step();
+          });
         }
       };
 
@@ -185,12 +190,20 @@
           }
         }
         else if (event.key === 'Enter') {
-          cursor.complete();
-          freeControls(controls);
-          cursor.setupBody(world);
-          ball.material.visible = true;
-          ballBody = cursor.simulateBall(world);
-          isSimulating = true;
+          if (cursor.completed) {
+            cursor.eachTrack((track) => {
+              if (!track.mesh) {
+                grid.mesh.add(track.getMesh());
+              }
+              track.simulateBall(world);
+            });
+            isSimulating = true;
+          }
+          else {
+            cursor.complete();
+            freeControls(controls);
+            cursor.setupBody(world);
+          }
         }
         else if (event.key === 'ArrowUp') {
           if (event.shiftKey) {
