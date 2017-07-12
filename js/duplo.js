@@ -54,11 +54,12 @@ class Cursor {
   }
 
   updatePosition() {
+    // (this.position.y + 0.5) * this.settings.block.y - this.settings.block.y / 2,
+    // = (this.position.y + 0.5) * this.settings.block.y
+    //   + (this.settings.sphere.r - this.settings.block.y / 2)
+    //   + (this.settings.block.y - this.settings.sphere.r),
     this.mesh.position.set(
       (this.position.x + 0.5) * this.settings.block.x,
-      //(this.position.y + 0.5) * this.settings.block.y
-      //  + (this.settings.sphere.r - this.settings.block.y / 2)
-      //  + (this.settings.block.y - this.settings.sphere.r),
       (this.position.y + 0.5) * this.settings.block.y - this.settings.block.y / 2,
       (this.position.z + 0.5) * this.settings.block.z
     );
@@ -265,16 +266,112 @@ class Cursor {
     this.setPosition(lastBlock.position);
   }
 
+  setupGroundMesh() {
+    for (let x = 0; x < 4; x++) {
+      for (let z = 0; z < 4; z++) {
+        let mesh = Block.getGroundMesh();
+        mesh.position.x = this.grid.settings.block.x * (x + 0.5) * 2.5;
+        mesh.position.y = -this.grid.settings.block.y * 0.2;
+        mesh.position.z = this.grid.settings.block.z * (z + 0.5) * 2.5;
+
+        this.grid.getMesh().add(mesh);
+      }
+    }
+  }
+
   setupBody(world) {
     this.grid.forEach((block) => {
-      block.setupBody(world);
+      block.setupBody(world, this.grid);
     });
+    /*
     this.tracks.forEach((track) => {
       let firstBlock = track.peek();
       // TODO: put moving ball
     });
+    */
+  }
+
+  store(name) {
+    window.localStorage.setItem(name, JSON.stringify(this.toHash()));
+  }
+
+  restore(name, scene) {
+    let item = window.localStorage.getItem(name);
+    if (item) {
+      // clear scene
+      let oldMeshes = [];
+      scene.children.forEach((child) => {
+        if (child instanceof THREE.Mesh || child instanceof THREE.Line) {
+          oldMeshes.push(child);
+        }
+      });
+      oldMeshes.forEach((mesh) => {
+        scene.remove(mesh);
+      });
+
+      // restore
+      let hash = JSON.parse(item);
+      this.copyFromHash(hash);
+
+      let gridMesh = this.grid.getMesh();
+      scene.add(gridMesh);
+      this.grid.cells.forEach((plane) => {
+        return plane.forEach((line) => {
+          return line.forEach((blockHash) => {
+            if (blockHash) {
+              let block = new Block(blockHash.settings);
+              block.copyFromHash(blockHash);
+              let blockMesh = block.getMesh(this.grid);
+              if (blockMesh) {
+                gridMesh.add(blockMesh);
+              }
+            }
+          });
+        });
+      });
+      gridMesh.add(this.getMesh());
+
+      this.setupGroundMesh();
+    }
+  }
+
+  toHash() {
+    return {
+      grid: this.grid.toHash(),
+      settings: this.settings,
+      position: {
+        x:this.position.x,
+        y:this.position.y,
+        z:this.position.z
+      },
+      started: this.started,
+      tracks: this.tracks.map((track) => {
+        return track.toHash();
+      }),
+      completed: this.completed
+    }
+  }
+
+  copyFromHash(hash) {
+    this.settings = hash.settings;
+    this.grid = new Grid(this.settings);
+    this.grid.copyFromHash(hash.grid);
+    this.position = new THREE.Vector3().copy(hash.position);
+    this.started = hash.started;
+    this.tracks = hash.tracks.map((trackHash) => {
+      let track = new Track(trackHash.settings);
+      track.copyFromHash(trackHash, this.grid);
+      return track;
+    });
+    this.completed = hash.completed;
   }
 }
+
+Cursor.fromHash = (hash) => {
+  let cursor = new Cursor(null, hash.settings);
+  cursor.copyFromHash(hash);
+  return cursor;
+};
 
 class Board {
   constructor(settings) {
@@ -331,6 +428,18 @@ class Board {
       this.mesh.material.visible = false;
     }
   }
+
+  toHash() {
+    return {
+      settings: this.settings,
+      layer: this.layer
+    };
+  }
+
+  copyFromHash(hash) {
+    this.settings = hash.settings;
+    this.layer = hash.layer;
+  }
 }
 
 class Grid {
@@ -365,8 +474,6 @@ class Grid {
         );
       }
     }
-    //for (let y = 0; y <= world.y; y++) {
-    //  for (let z = 0; z <= world.z; z++) {
     for (let y = 0; y < world.y; y++) {
       for (let z = 0; z <= world.z; z += world.z) {
         lineGeometry.vertices.push(
@@ -375,16 +482,6 @@ class Grid {
         );
       }
     }
-    /*
-    for (let z = 0; z <= world.z; z++) {
-      for (let x = 0; x <= world.x; x++) {
-        lineGeometry.vertices.push(
-          new THREE.Vector3(block.x * x,                 0, block.z * z),
-          new THREE.Vector3(block.x * x, block.y * world.y, block.z * z)
-        );
-      }
-    }
-    */
     let lineSegments = new THREE.LineSegments(lineGeometry, lineMaterial);
     lineSegments.position.set(
       -block.x * world.x / 2,
@@ -506,6 +603,62 @@ class Grid {
       }
     });
     return summary;
+  }
+
+  toHash() {
+    return {
+      settings: this.settings,
+      cells: this.cells.map((plane) => {
+        return plane.map((line) => {
+          return line.map((block) => {
+            return block ? block.toHash() : null;
+          });
+        });
+      }),
+      board: this.board.toHash()
+    };
+  }
+
+  copyFromHash(hash) {
+    this.settings = hash.settings;
+    this.cells = hash.cells.map((plane) => {
+      return plane.map((line) => {
+        return line.map((blockHash) => {
+          if (blockHash) {
+            let block = new Block(hash.settings);
+            block.copyFromHash(blockHash);
+            return block;
+          }
+          else {
+            return null;
+          }
+        });
+      });
+    });
+    this.cells.forEach((plane) => {
+      plane.forEach((line) => {
+        line.forEach((block) => {
+          if (block) {
+            if (block.fromSide) {
+              block.prevBlock = this.get({
+                x: block.position.x + block.fromSide.x,
+                y: block.position.y + block.fromSide.y,
+                z: block.position.z + block.fromSide.z
+              });
+            }
+            if (block.toSide) {
+              block.nextBlock = this.get({
+                x: block.position.x + block.toSide.x,
+                y: block.position.y + block.toSide.y,
+                z: block.position.z + block.toSide.z
+              });
+            }
+          }
+        });
+      });
+    });
+    this.board = new Board(this.settings);
+    this.board.copyFromHash(hash.board);
   }
 }
 
@@ -640,118 +793,125 @@ class Block {
       hasCeil = this.hasCeil(grid);
     }
     if (!this.mesh) {
-      if (this.fromSide === null && this.toSide === null) {
-        this._setType('duplo-2x2x2_low.stl');
-      }
-      else if (this.fromSide === null || this.toSide === null) {
-        this._setType('end_low.stl');
-        let openSide = this.fromSide || this.toSide;
-        if      (openSide.equals(FRONT)) this.rotateZ =  Math.PI;
-        else if (openSide.equals(LEFT))  this.rotateZ =  Math.PI / 2;
-        else if (openSide.equals(RIGHT)) this.rotateZ = -Math.PI / 2;
-      }
-      else if (this.isOpenSides(LEFT, RIGHT)) {
-        if (hasCeil) {
-          this._setType('straight_hole_low.stl');
+      if (!this.type) {
+        if (this.fromSide === null && this.toSide === null) {
+          this._setType('duplo-2x2x2_low.stl');
         }
-        else {
-          this._setType('straight_low.stl');
+        else if (this.fromSide === null || this.toSide === null) {
+          this._setType('end_low.stl');
+          let openSide = this.fromSide || this.toSide;
+          if      (openSide.equals(FRONT)) this.rotateZ =  Math.PI;
+          else if (openSide.equals(LEFT))  this.rotateZ =  Math.PI / 2;
+          else if (openSide.equals(RIGHT)) this.rotateZ = -Math.PI / 2;
         }
-        this.rotateZ = Math.PI / 2;
-      }
-      else if (this.isOpenSides(FRONT, BACK)) {
-        if (hasCeil) {
-          this._setType('straight_hole_low.stl');
-        }
-        else {
-          this._setType('straight_low.stl');
-        }
-      }
-      else if (this.fromSide.clone().sub(this.toSide).y === 0) {
-        if (hasCeil) {
-          this._setType('corner_hole_low.stl');
-        }
-        else {
-          this._setType('corner_low.stl');
-        }
-        if      (this.isOpenSides(BACK, LEFT))   this.rotateZ = -Math.PI / 2;
-        else if (this.isOpenSides(BACK, RIGHT))  this.rotateZ =  Math.PI;
-        else if (this.isOpenSides(FRONT, RIGHT)) this.rotateZ =  Math.PI / 2;
-      }
-      else if (!this.fromSide.equals(TOP) && this.toSide.equals(BOTTOM)) {
-        if (this.nextBlock && this.nextBlock.toSide && this.nextBlock.toSide.equals(BOTTOM)) {
+        else if (this.isOpenSides(LEFT, RIGHT)) {
           if (hasCeil) {
-            this._setType('verticalCurveStart_hole_low.stl');
+            this._setType('straight_hole_low.stl');
           }
           else {
-            this._setType('verticalCurveStart_low.stl');
+            this._setType('straight_low.stl');
           }
-          if      (this.fromSide.equals(BACK))  this.rotateZ =  Math.PI;
-          else if (this.fromSide.equals(LEFT))  this.rotateZ = -Math.PI / 2;
-          else if (this.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI / 2;
+          this.rotateZ = Math.PI / 2;
         }
-      }
-      else if (this.fromSide.equals(TOP) && !this.toSide.equals(BOTTOM)) {
-        if (this.prevBlock.fromSide.equals(TOP)) {
-          this._setType('verticalCurveEnd_hole_low.stl');
-          if      (this.toSide.equals(BACK))  this.rotateZ =  Math.PI;
-          else if (this.toSide.equals(LEFT))  this.rotateZ = -Math.PI / 2;
-          else if (this.toSide.equals(RIGHT)) this.rotateZ =  Math.PI / 2;
+        else if (this.isOpenSides(FRONT, BACK)) {
+          if (hasCeil) {
+            this._setType('straight_hole_low.stl');
+          }
+          else {
+            this._setType('straight_low.stl');
+          }
         }
-        else {
-          if ((this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(BACK)) ||
-              (this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(FRONT)) ||
-              (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(LEFT)) ||
-              (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(RIGHT))) {
-            if (this.prevBlock.hasCeil(grid)) {
-              this._setType('ramp_hole_low.stl');
+        else if (this.fromSide.clone().sub(this.toSide).y === 0) {
+          if (hasCeil) {
+            this._setType('corner_hole_low.stl');
+          }
+          else {
+            this._setType('corner_low.stl');
+          }
+          if      (this.isOpenSides(BACK, LEFT))   this.rotateZ = -Math.PI / 2;
+          else if (this.isOpenSides(BACK, RIGHT))  this.rotateZ =  Math.PI;
+          else if (this.isOpenSides(FRONT, RIGHT)) this.rotateZ =  Math.PI / 2;
+        }
+        else if (!this.fromSide.equals(TOP) && this.toSide.equals(BOTTOM)) {
+          if (this.nextBlock && this.nextBlock.toSide && this.nextBlock.toSide.equals(BOTTOM)) {
+            if (hasCeil) {
+              this._setType('verticalCurveStart_hole_low.stl');
             }
             else {
-              this._setType('ramp_low.stl');
+              this._setType('verticalCurveStart_low.stl');
             }
+            if      (this.fromSide.equals(BACK))  this.rotateZ =  Math.PI;
+            else if (this.fromSide.equals(LEFT))  this.rotateZ = -Math.PI / 2;
+            else if (this.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI / 2;
+          }
+        }
+        else if (this.fromSide.equals(TOP) && !this.toSide.equals(BOTTOM)) {
+          if (this.prevBlock.fromSide.equals(TOP)) {
+            this._setType('verticalCurveEnd_hole_low.stl');
             if      (this.toSide.equals(BACK))  this.rotateZ =  Math.PI;
             else if (this.toSide.equals(LEFT))  this.rotateZ = -Math.PI / 2;
             else if (this.toSide.equals(RIGHT)) this.rotateZ =  Math.PI / 2;
           }
-          else if ((this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(LEFT)) ||
-              (this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(RIGHT)) ||
-              (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(FRONT)) ||
-              (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(BACK))) {
-            if (this.prevBlock.hasCeil(grid)) {
-              this._setType('rampCorner1_hole_low.stl');
+          else {
+            if ((this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(BACK)) ||
+                (this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(FRONT)) ||
+                (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(LEFT)) ||
+                (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(RIGHT))) {
+              if (this.prevBlock.hasCeil(grid)) {
+                this._setType('ramp_hole_low.stl');
+              }
+              else {
+                this._setType('ramp_low.stl');
+              }
+              if      (this.toSide.equals(BACK))  this.rotateZ =  Math.PI;
+              else if (this.toSide.equals(LEFT))  this.rotateZ = -Math.PI / 2;
+              else if (this.toSide.equals(RIGHT)) this.rotateZ =  Math.PI / 2;
             }
-            else {
-              this._setType('rampCorner1_low.stl');
+            else if ((this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(LEFT)) ||
+                (this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(RIGHT)) ||
+                (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(FRONT)) ||
+                (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(BACK))) {
+              if (this.prevBlock.hasCeil(grid)) {
+                this._setType('rampCorner1_hole_low.stl');
+              }
+              else {
+                this._setType('rampCorner1_low.stl');
+              }
+              if      (this.prevBlock.fromSide.equals(BACK))  this.rotateZ = -Math.PI / 2;
+              else if (this.prevBlock.fromSide.equals(FRONT)) this.rotateZ =  Math.PI / 2;
+              else if (this.prevBlock.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI;
             }
-            if      (this.prevBlock.fromSide.equals(BACK))  this.rotateZ = -Math.PI / 2;
-            else if (this.prevBlock.fromSide.equals(FRONT)) this.rotateZ =  Math.PI / 2;
-            else if (this.prevBlock.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI;
-          }
-          else if ((this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(RIGHT)) ||
-              (this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(LEFT)) ||
-              (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(BACK)) ||
-              (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(FRONT))) {
-            if (this.prevBlock.hasCeil(grid)) {
-              this._setType('rampCorner2_hole_low.stl');
+            else if ((this.prevBlock.fromSide.equals(BACK) && this.toSide.equals(RIGHT)) ||
+                (this.prevBlock.fromSide.equals(FRONT) && this.toSide.equals(LEFT)) ||
+                (this.prevBlock.fromSide.equals(LEFT) && this.toSide.equals(BACK)) ||
+                (this.prevBlock.fromSide.equals(RIGHT) && this.toSide.equals(FRONT))) {
+              if (this.prevBlock.hasCeil(grid)) {
+                this._setType('rampCorner2_hole_low.stl');
+              }
+              else {
+                this._setType('rampCorner2_low.stl');
+              }
+              if      (this.prevBlock.fromSide.equals(BACK))  this.rotateZ = -Math.PI / 2;
+              else if (this.prevBlock.fromSide.equals(FRONT)) this.rotateZ =  Math.PI / 2;
+              else if (this.prevBlock.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI;
             }
-            else {
-              this._setType('rampCorner2_low.stl');
-            }
-            if      (this.prevBlock.fromSide.equals(BACK))  this.rotateZ = -Math.PI / 2;
-            else if (this.prevBlock.fromSide.equals(FRONT)) this.rotateZ =  Math.PI / 2;
-            else if (this.prevBlock.fromSide.equals(RIGHT)) this.rotateZ =  Math.PI;
           }
         }
+        else if (this.isOpenSides(TOP, BOTTOM) && this.nextBlock && this.nextBlock.isOpenSides(TOP, BOTTOM)) {
+          this._setType('verticalHole_low.stl');
+        }
+        if (!this.type) return null;
       }
-      else if (this.isOpenSides(TOP, BOTTOM) && this.nextBlock && this.nextBlock.isOpenSides(TOP, BOTTOM)) {
-        this._setType('verticalHole_low.stl');
-      }
-      if (!this.type) return null;
 
       let color = new THREE.Color(
         1.0, //this.position.x / this.settings.world.x,
         this.position.y / this.settings.world.y,
         0.2  //this.position.z / this.settings.world.z
+      );
+      color = new THREE.Color(
+        this.position.x / this.settings.world.x,
+        this.position.y / this.settings.world.y,
+        this.position.z / this.settings.world.z
       );
       let material = new THREE.MeshPhongMaterial({color: color, transparent:true, opacity:1.0});
       this.mesh = new THREE.Mesh(this.getGeometry(), material);
@@ -805,8 +965,10 @@ class Block {
     this.toSide = null;
   }
 
-  setupBody(world) {
-    if (!this.mesh) return;
+  setupBody(world, grid) {
+    //if (!this.mesh) return;
+    if (!this.type) return;
+    if (!this.mesh) this.getMesh(grid);
 
     let w = this.settings.block.x;
     let h = this.settings.block.y;
@@ -829,13 +991,15 @@ class Block {
       let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
       let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/2));
       let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h, d/10));
-      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/10));
+      let wallShape4 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
       boxBody.addShape(groundShape);
       boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, h/2, 0));
       boxBody.addShape(wallShape2, new CANNON.Vec3(0, h/2, -d*4/10));
+      boxBody.addShape(wallShape3, new CANNON.Vec3(-w*4/10, h/2, d*4/10)); // 4/10 = 1/2 - 1/10
       let q = new CANNON.Quaternion();
       q.setFromAxisAngle(CANNON.Vec3.UNIT_Y, Math.PI/4);
-      boxBody.addShape(wallShape3, new CANNON.Vec3(w/5, h/2, -d/5), q);
+      boxBody.addShape(wallShape4, new CANNON.Vec3(w/5, h/2, -d/5), q);
     }
     else if (this.type === "straight_low.stl" || this.type === "straight_hole_low.stl") {
       let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
@@ -902,36 +1066,44 @@ class Block {
       boxBody.addShape(wallShape2, new CANNON.Vec3(-w*4/10, h/2, 0));
     }
     else if (this.type === "rampCorner1_low.stl" || this.type === "rampCorner1_hole_low.stl") {
-      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let groundShape1 = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let groundShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
       let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/2));
       let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h, d/10));
-      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/10));
+      let wallShape4 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
+      boxBody.addShape(groundShape1);
       let groundQuaternion = new CANNON.Quaternion();
       let axis = new CANNON.Vec3(1, 0, 1);
       axis.normalize();
       groundQuaternion.setFromAxisAngle(axis, Math.PI/4);
-      boxBody.addShape(groundShape, new CANNON.Vec3(0, h/2, 0), groundQuaternion);
+      boxBody.addShape(groundShape2, new CANNON.Vec3(0, h/2, 0), groundQuaternion);
       boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, h/2, 0));
       boxBody.addShape(wallShape2, new CANNON.Vec3(0, h/2, -d*4/10));
+      boxBody.addShape(wallShape3, new CANNON.Vec3(-w*4/10, h/2, d*4/10)); // 4/10 = 1/2 - 1/10
       let wallQuaternion = new CANNON.Quaternion();
       wallQuaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, Math.PI/4);
-      boxBody.addShape(wallShape3, new CANNON.Vec3(w/5, h/2, -d/5), wallQuaternion);
+      boxBody.addShape(wallShape4, new CANNON.Vec3(w/5, h/2, -d/5), wallQuaternion);
     }
     else if (this.type === "rampCorner2_low.stl" || this.type === "rampCorner2_hole_low.stl") {
-      let groundShape = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let groundShape1 = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
+      let groundShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h/8, d/2));
       let wallShape1 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/2));
       let wallShape2 = new CANNON.Box(new CANNON.Vec3(w/2, h, d/10));
-      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
+      let wallShape3 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/10));
+      let wallShape4 = new CANNON.Box(new CANNON.Vec3(w/10, h, d/3));
+      boxBody.addShape(groundShape1);
       let groundQuaternion = new CANNON.Quaternion();
       let axis = new CANNON.Vec3(1, 0, 1);
       axis.normalize();
       groundQuaternion.setFromAxisAngle(axis, -Math.PI/4);
-      boxBody.addShape(groundShape, new CANNON.Vec3(0, h/2, 0), groundQuaternion);
+      boxBody.addShape(groundShape2, new CANNON.Vec3(0, h/2, 0), groundQuaternion);
       boxBody.addShape(wallShape1, new CANNON.Vec3(w*4/10, h/2, 0));
       boxBody.addShape(wallShape2, new CANNON.Vec3(0, h/2, d*4/10));
+      boxBody.addShape(wallShape3, new CANNON.Vec3(-w*4/10, h/2, -d*4/10)); // 4/10 = 1/2 - 1/10
       let wallQuaternion = new CANNON.Quaternion();
       wallQuaternion.setFromAxisAngle(CANNON.Vec3.UNIT_Y, -Math.PI/4);
-      boxBody.addShape(wallShape3, new CANNON.Vec3(w/5, h/2, d/5), wallQuaternion);
+      boxBody.addShape(wallShape4, new CANNON.Vec3(w/5, h/2, d/5), wallQuaternion);
     }
 
     if (boxBody.shapes.length === 0) {
@@ -959,6 +1131,35 @@ class Block {
     mesh.position.copy(boxBody.position);
     mesh.quaternion.copy(boxBody.quaternion);
     parent.add(mesh);
+  }
+
+  toHash() {
+    let hash = {
+      settings: this.settings,
+      position: {x: this.position.x, y: this.position.y, z: this.position.z},
+      type: this.type,
+      rotateZ: this.rotateZ
+    };
+    if (this.fromSide) {
+      hash['fromSide'] = {x: this.fromSide.x, y: this.fromSide.y, z: this.fromSide.z};
+    }
+    if (this.toSide) {
+      hash['toSide'] = {x: this.toSide.x, y: this.toSide.y, z: this.toSide.z};
+    }
+    return hash;
+  }
+
+  copyFromHash(hash) {
+    this.settings = hash.settings;
+    this.position = new THREE.Vector3().copy(hash.position);
+    this.type = hash.type;
+    this.rotateZ = hash.rotateZ;
+    if (hash.fromSide) {
+      this.fromSide = new THREE.Vector3().copy(hash.fromSide);
+    }
+    if (hash.toSide) {
+      this.toSide = new THREE.Vector3().copy(hash.toSide);
+    }
   }
 }
 
@@ -1038,15 +1239,37 @@ class Track {
       world.add(this.ballBody);
     }
 
-    const impact = 2000;
-    this.ballBody.applyImpulse(
-      firstBlock.toSide.clone().multiplyScalar(impact),
-      this.ballBody.position
-    );
+    setTimeout(() => {
+      const impact = 2000;
+      this.ballBody.applyImpulse(
+        firstBlock.toSide.clone().multiplyScalar(impact),
+        this.ballBody.position
+      );
+    }, 100);
   }
 
   step() {
     if (!this.ballBody || !this.mesh) return;
     this.mesh.position.copy(this.ballBody.position);
+  }
+
+  toHash() {
+    return {
+      settings: this.settings,
+      track: this.track.map((block) => {
+        return {
+          x: block.position.x,
+          y: block.position.y,
+          z: block.position.z
+        }
+      })
+    }
+  }
+
+  copyFromHash(hash, grid) {
+    this.settings = hash.settings;
+    this.track = hash.track.map((pos) => {
+      return grid.get(pos);
+    });
   }
 }
