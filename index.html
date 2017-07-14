@@ -23,15 +23,18 @@
       };
 
       let scene = new THREE.Scene();
-      let camera = new THREE.PerspectiveCamera( 50, window.innerWidth/window.innerHeight, 0.1, 1000 );
+      let overlayScene = new THREE.Scene();
+      let camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
 
       let renderer = new THREE.WebGLRenderer();
-      renderer.setSize( window.innerWidth, window.innerHeight );
-      renderer.setClearColor(0xccffaa);
-      document.body.appendChild( renderer.domElement );
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0xccffaa, 0.0); // TODO
+      renderer.autoClear = false;
+      document.body.appendChild(renderer.domElement);
 
       let grid = new Grid(SETTINGS);
       scene.add(grid.getMesh());
+      overlayScene.add(grid.getOverlayMesh());
 
       let cursor = new Cursor(grid, SETTINGS);
       grid.getMesh().add(cursor.getMesh());
@@ -39,13 +42,16 @@
       let directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
       directionalLight.position.set(-1, 0.8, 0.6);
       scene.add(directionalLight);
+      overlayScene.add(directionalLight.clone());
 
       directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
       directionalLight.position.set(1, -0.8, -0.6);
       scene.add(directionalLight);
+      overlayScene.add(directionalLight.clone());
 
       let ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
       scene.add(ambientLight);
+      overlayScene.add(ambientLight.clone());
 
       const scale = 1.1;
       camera.position.set(
@@ -85,8 +91,11 @@
       }
       let isSimulating = false;
       let render = function () {
-        requestAnimationFrame( render );
+        requestAnimationFrame(render);
+        renderer.clear();
         renderer.render(scene, camera);
+        renderer.clearDepth();
+        renderer.render(overlayScene, camera);
         if (isSimulating) {
           world.step(1 / 60.0);
           cursor.eachTrack((track) => {
@@ -167,6 +176,7 @@
             cursor.eachTrack((track) => {
               if (!track.mesh) {
                 cursor.grid.mesh.add(track.getMesh());
+                cursor.grid.overlayMesh.add(track.getOverlayMesh());
               }
               track.simulateBall(world);
             });
@@ -174,6 +184,7 @@
           }
           else if (!cursor.started) {
             cursor.complete();
+            cursor.grid.board.hide();
             freeControls(controls);
             cursor.setupBody(world);
           }
@@ -221,6 +232,10 @@
         }
         else if (event.key === 'r') {
           cursor.reset();
+          let numObjects = world.numObjects();
+          for (let i = 0; i < numObjects; i++) {
+            world.removeBody(world.bodies[0]);
+          }
           restrictControls(controls);
         }
         else if (event.key === 's') {
@@ -234,8 +249,11 @@
           if (name) {
             cursor.restore(name, scene);
             if (cursor.completed) {
+              cursor.grid.getMesh().material.visible = false;
+              cursor.getMesh().material.visible = false;
+              cursor.grid.showAllLayers();
+              cursor.grid.board.hide();
               freeControls(controls);
-              console.log(world);
               cursor.setupBody(world);
             }
           }

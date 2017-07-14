@@ -155,10 +155,16 @@ class Cursor {
 
   reset() {
     this.grid.reset();
-    this.tracks = [new Track(this.settings)];
     this.started = false;
+    this.completed = false;
     this.setPosition({x:0, y:this.settings.world.y - 1, z:0});
+    this.grid.board.setPosition(this.settings.world.y - 1);
+    this.grid.board.show();
     this.mesh.material.visible = true;
+    this.tracks.forEach((track) => {
+      track.reset();
+    });
+    this.tracks = [new Track(this.settings)];
   }
 
   isInsideGrid(nextPosition) {
@@ -316,15 +322,11 @@ class Cursor {
       let gridMesh = this.grid.getMesh();
       scene.add(gridMesh);
       this.grid.cells.forEach((plane) => {
-        return plane.forEach((line) => {
-          return line.forEach((blockHash) => {
-            if (blockHash) {
-              let block = new Block(blockHash.settings);
-              block.copyFromHash(blockHash);
-              let blockMesh = block.getMesh(this.grid);
-              if (blockMesh) {
-                gridMesh.add(blockMesh);
-              }
+        plane.forEach((line) => {
+          line.forEach((block) => {
+            if (block) {
+              let blockMesh = block.getMesh();
+              if (blockMesh) gridMesh.add(blockMesh);
             }
           });
         });
@@ -448,6 +450,7 @@ class Grid {
     this.cells = this.buildCells();
     this.board = new Board(this.settings);
     this.mesh = null;
+    this.overlayMesh = null;
   }
 
   getMesh() {
@@ -456,6 +459,16 @@ class Grid {
       this.mesh.add(this.board.getMesh());
     }
     return this.mesh;
+  }
+
+  getOverlayMesh() {
+    if (!this.overlayMesh) {
+      this.overlayMesh = new THREE.Mesh(this.getMesh().geometry, this.getMesh().material.clone());
+      this.overlayMesh.material.transparent = true;
+      this.overlayMesh.material.opacity = 0.0;
+      this.overlayMesh.position.copy(this.getMesh().position);
+    }
+    return this.overlayMesh;
   }
 
   createMesh() {
@@ -560,7 +573,6 @@ class Grid {
   }
 
   showLayers(layer) {
-    this.board.hide();
     this.forEach((block, position) => {
       if (block && block.mesh) {
         if (layer < 0 || position.y < layer) {
@@ -1169,6 +1181,7 @@ class Track {
     this.track = [];
     this.mesh = null;
     this.ballBody = null;
+    this.overlayMesh = null;
   }
 
   add(block) {
@@ -1207,6 +1220,26 @@ class Track {
       );
     }
     return this.mesh;
+  }
+
+  getOverlayMesh() {
+    if (!this.overlayMesh) {
+      this.overlayMesh = new THREE.Mesh(this.getMesh().geometry, this.getMesh().material.clone());
+      this.overlayMesh.material.transparent = true;
+      this.overlayMesh.material.opacity = 0.3;
+    }
+    return this.overlayMesh;
+  }
+
+  reset() {
+    this.track = [];
+    if (this.mesh) {
+      this.mesh.parent.remove(this.mesh);
+      this.mesh.geometry.dispose();
+      this.mesh.material.dispose();
+    }
+    this.mesh = null;
+    this.ballBody = null;
   }
 
   simulateBall(world) {
@@ -1251,6 +1284,7 @@ class Track {
   step() {
     if (!this.ballBody || !this.mesh) return;
     this.mesh.position.copy(this.ballBody.position);
+    this.overlayMesh.position.copy(this.ballBody.position);
   }
 
   toHash() {
