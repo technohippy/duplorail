@@ -28,7 +28,6 @@
 
       let renderer = new THREE.WebGLRenderer();
       renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setClearColor(0xccffaa, 0.0); // TODO
       renderer.autoClear = false;
       document.body.appendChild(renderer.domElement);
 
@@ -92,9 +91,11 @@
       let isSimulating = false;
       let render = function () {
         requestAnimationFrame(render);
+        renderer.setClearColor(0xccffaa, 1.0);
         renderer.clear();
         renderer.render(scene, camera);
         renderer.clearDepth();
+        renderer.setClearColor(0xccffaa, 0.0);
         renderer.render(overlayScene, camera);
         if (isSimulating) {
           world.step(1 / 60.0);

@@ -1238,7 +1238,13 @@ class Track {
       this.mesh.geometry.dispose();
       this.mesh.material.dispose();
     }
+    if (this.overlayMesh) {
+      this.overlayMesh.parent.remove(this.overlayMesh);
+      this.overlayMesh.geometry.dispose();
+      this.overlayMesh.material.dispose();
+    }
     this.mesh = null;
+    this.overlayMesh = null;
     this.ballBody = null;
   }
 
