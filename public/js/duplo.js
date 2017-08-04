@@ -6,15 +6,76 @@ const RIGHT = new THREE.Vector3(1, 0, 0);
 const BACK = new THREE.Vector3(0, 0, -1);
 const FRONT = new THREE.Vector3(0, 0, 1);
 
+class Demo {
+  constructor(scene, world, cursor, names) {
+    this.scene = scene;
+    this.world = world;
+    this.cursor = cursor;
+    this.cursor.addEventListener('goal', () => {
+      this.next();
+    });
+    this.names = names;
+    this.index = 0;
+    this.eventListeners = [];
+  }
+
+  addEventListener(type, listener) {
+    if (type !== 'prepare') {
+      throw `unknown event type: ${type}`;
+    }
+    this.eventListeners.push(listener);
+  }
+
+  start() {
+    this.index = 0;
+    this.next();
+  }
+
+  next() {
+    if (this.names.length <= this.index) {
+      this.index = 0;
+    }
+    let name = this.names[this.index++];
+    this.cursor.restore(name, this.scene, true);
+    this.eventListeners.forEach((listener) => {
+      listener();
+    });
+  }
+}
+
 class Cursor {
   constructor(grid, settings) {
     this.grid = grid;
     this.settings = settings;
     this.position = new THREE.Vector3(0, this.settings.world.y - 1, 0);
     this.started = false;
-    this.tracks = [new Track(this.settings)];
+    this.tracks = [this._createTrack()];
     this.mesh = null;
     this.completed = false;
+    this.eventListeners = [];
+  }
+
+  _createTrack() {
+    let track = new Track(this.settings);
+    track.addEventListener('goal', (t) => {
+      this.checkAllTrackGoaled();
+    });
+    return track;
+  }
+
+  addEventListener(type, listener) {
+    if (type !== 'goal') {
+      throw `unknow evnet type: ${type}`;
+    }
+    this.eventListeners.push(listener);
+  }
+
+  checkAllTrackGoaled() {
+    if (this.tracks.every((track) => {return track.length === 0 || track.goal;})) {
+      this.eventListeners.forEach((listener) => {
+        listener(this);
+      });
+    }
   }
 
   getTrack() {
@@ -111,7 +172,7 @@ class Cursor {
       this.grid.getMesh().add(mesh);
     }
 
-    this.tracks.unshift(new Track(this.settings));
+    this.tracks.unshift(this._createTrack());
   }
 
   complete() {
@@ -164,7 +225,7 @@ class Cursor {
     this.tracks.forEach((track) => {
       track.reset();
     });
-    this.tracks = [new Track(this.settings)];
+    this.tracks = [this._createTrack()];
   }
 
   isInsideGrid(nextPosition) {
@@ -301,7 +362,7 @@ class Cursor {
     window.localStorage.setItem(name, JSON.stringify(this.toHash()));
   }
 
-  restore(name, scene) {
+  restore(name, scene, fromDemo) {
     let item = window.localStorage.getItem(name);
     if (item) {
       // clear scene
@@ -317,7 +378,7 @@ class Cursor {
 
       // restore
       let hash = JSON.parse(item);
-      this.copyFromHash(hash);
+      this.copyFromHash(hash, fromDemo);
 
       let gridMesh = this.grid.getMesh();
       scene.add(gridMesh);
@@ -354,7 +415,7 @@ class Cursor {
     }
   }
 
-  copyFromHash(hash) {
+  copyFromHash(hash, fromDemo) {
     this.settings = hash.settings;
     this.grid = new Grid(this.settings);
     this.grid.copyFromHash(hash.grid);
@@ -363,6 +424,11 @@ class Cursor {
     this.tracks = hash.tracks.map((trackHash) => {
       let track = new Track(trackHash.settings);
       track.copyFromHash(trackHash, this.grid);
+      if (fromDemo) {
+        track.addEventListener('goal', (t) => {
+          this.checkAllTrackGoaled();
+        });
+      }
       return track;
     });
     this.completed = hash.completed;
@@ -1182,6 +1248,15 @@ class Track {
     this.mesh = null;
     this.ballBody = null;
     this.overlayMesh = null;
+    this.goal = false;
+    this.eventListeners = [];
+  }
+
+  addEventListener(type, listener) {
+    if (type !== 'goal') {
+      throw `unknown event type: ${type}`;
+    }
+    this.eventListeners.push(listener);
   }
 
   add(block) {
@@ -1250,6 +1325,7 @@ class Track {
 
   simulateBall(world) {
     if (this.length === 0) return;
+    this.goal = false
 
     let firstBlock = this.peek(this.length - 1);
     let firstMesh = firstBlock.getMesh();
@@ -1263,6 +1339,7 @@ class Track {
       this.ballBody.velocity.setZero();
       this.ballBody.quaternion.set(0, 0, 0, 0);
       this.ballBody.angularVelocity.setZero();
+      this.ballBody.wakeUp();
     }
     else {
       this.ballBody = new CANNON.Body({
@@ -1274,6 +1351,12 @@ class Track {
           firstMesh.position.y + this.settings.block.y / 2 + baseThickness + 8 + 1,
           firstMesh.position.z
         )
+      });
+      this.ballBody.addEventListener('sleep', () => {
+        this.goal = true;
+        this.eventListeners.forEach((listener) => {
+          listener(this);
+        });
       });
       world.add(this.ballBody);
     }
@@ -1290,7 +1373,8 @@ class Track {
   step() {
     if (!this.ballBody || !this.mesh) return;
     this.mesh.position.copy(this.ballBody.position);
-    this.overlayMesh.position.copy(this.ballBody.position);
+    //this.overlayMesh.position.copy(this.ballBody.position);
+    this.getOverlayMesh().position.copy(this.ballBody.position);
   }
 
   toHash() {
